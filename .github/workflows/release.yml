@@ -33,9 +33,17 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Validate packages and userscript
+        run: pnpm test:ci
+
       - name: Publish packages
         run: pnpm -r publish --provenance --no-git-checks
 
       - run: npx changelogithub
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attach userscript to release
+        run: gh release upload "$GITHUB_REF_NAME" apps/monkey/dist/bilipack.user.js apps/monkey/dist/bilipack.meta.js --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

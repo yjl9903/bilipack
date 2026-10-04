@@ -34,3 +34,12 @@ jobs:
 
       - name: Test
         run: pnpm test:ci
+
+      - name: Save userscript artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: bilipack-userscript
+          path: |
+            apps/monkey/dist/bilipack.user.js
+            apps/monkey/dist/bilipack.meta.js
+          if-no-files-found: error
