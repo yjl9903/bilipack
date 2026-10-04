@@ -68,8 +68,8 @@ jobs:
           node-version: 26.10.0
           cache: pnpm
 
-      - name: Install
-        run: pnpm install --frozen-lockfile
+      - name: Update lockfile after renaming packages
+        run: pnpm install --lockfile-only --no-frozen-lockfile
 
       - name: Commit and push
         run: |
