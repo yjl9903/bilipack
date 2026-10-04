@@ -12,7 +12,7 @@
     "url": "git+https://github.com/yjl9903/bilipack.git"
   },
   "license": "MIT",
-  "author": "XLor",
+  "author": "OneKuma",
   "sideEffects": false,
   "type": "module",
   "exports": {
@@ -34,7 +34,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "smol-toml": "1.9.0"
+    "smol-toml": "^1.9.0",
+    "zod": "^4.6.5"
   },
   "engines": {
     "node": ">=v24.0.0"

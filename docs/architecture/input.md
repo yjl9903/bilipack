@@ -12,46 +12,13 @@
 
 领域库将 TOML 解析为 `Config`，检查字段、类型与组合规则。它只处理文本和配置语义，不依赖浏览器文件、UI 或平台控件。公开字段的用户含义由需求文档定义。
 
-以下是 [配置类型](../../packages/bilipack/src/config/types.ts) 中的实际结构：
+[配置 schema](../../packages/bilipack/src/config/schema.ts) 是配置结构与运行时语义的统一来源。严格对象拒绝未知区块和字段；路径转换、封面模式及默认值、标签与字幕语言去重、带时区日期和定时发布组合规则均在 schema 中定义。TOML 层负责语法解析，并在日期被解析器转换前检查裸日期的日历合法性，避免无效日期自动滚动。解析边界将 Zod issues 转换为现有中文 `Diagnostic`，保留字段路径和诊断分类，成功后递归冻结配置。
+
+[配置类型](../../packages/bilipack/src/config/types.ts) 从 schema 的输出推导，不再独立手写结构：
 
 ```typescript
-/** Percent of crop travel on each axis (0..100), shared by preview and native drag mapping. */
-export type Position = [number, number];
-
-export interface Config {
-  video?: { file: string };
-  /** Source modes: single enables native sync and uploads one original, dual disables it.
-   * wide = personal space (16:9), standard = home recommendation (4:3).
-   * Schema validity does not imply support by the current page adapter.
-   */
-  cover?:
-    | { mode: 'single'; file: string; wide_position: Position; standard_position: Position }
-    | { mode: 'dual'; wide_file: string; standard_file: string };
-  info?: {
-    title?: string;
-    declaration?: string;
-    no_reprint?: boolean;
-    category?: string;
-    tags?: string[];
-    topic?: string;
-    description?: string;
-  };
-  publish?: { scheduled?: boolean; at?: string; collection?: string };
-  display?: {
-    watermark?: boolean;
-    visibility?: '公开可见' | '仅自己可见';
-    hide_from_profile?: boolean;
-  };
-  commercial?: { enabled?: boolean };
-  media?: { dolby_audio?: boolean; hires_audio?: boolean; panorama?: boolean };
-  interaction?: {
-    dynamic?: string;
-    comments?: boolean;
-    danmaku?: boolean;
-    selected_comments?: boolean;
-  };
-  subtitles?: { file: string; language: string }[];
-}
+export type Position = z.infer<typeof positionSchema>;
+export type Config = z.infer<typeof configSchema>;
 ```
 
 可选字段不是默认填写整张表单：缺省表示保持现状，显式 `false`、空字符串和空列表仍表达关闭或清空的意图。封面的联合类型区分单原图加构图位置与独立双文件；字幕用语言关联素材路径。

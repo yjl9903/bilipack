@@ -1,40 +1,8 @@
-/** Percent of crop travel on each axis (0..100), shared by preview and native drag mapping. */
-export type Position = [number, number];
+import type { z } from 'zod';
+import type { configSchema, positionSchema } from './schema';
 
-export interface Config {
-  video?: { file: string };
-  /** Source modes: single enables native sync and uploads one original, dual disables it.
-   * wide = personal space (16:9), standard = home recommendation (4:3).
-   * Schema validity does not imply support by the current page adapter.
-   */
-  cover?:
-    | { mode: 'single'; file: string; wide_position: Position; standard_position: Position }
-    | { mode: 'dual'; wide_file: string; standard_file: string };
-  info?: {
-    title?: string;
-    declaration?: string;
-    no_reprint?: boolean;
-    category?: string;
-    tags?: string[];
-    topic?: string;
-    description?: string;
-  };
-  publish?: { scheduled?: boolean; at?: string; collection?: string };
-  display?: {
-    watermark?: boolean;
-    visibility?: '公开可见' | '仅自己可见';
-    hide_from_profile?: boolean;
-  };
-  commercial?: { enabled?: boolean };
-  media?: { dolby_audio?: boolean; hires_audio?: boolean; panorama?: boolean };
-  interaction?: {
-    dynamic?: string;
-    comments?: boolean;
-    danmaku?: boolean;
-    selected_comments?: boolean;
-  };
-  subtitles?: { file: string; language: string }[];
-}
+export type Position = z.infer<typeof positionSchema>;
+export type Config = z.infer<typeof configSchema>;
 
 const fieldGroups = ['info', 'publish', 'display', 'commercial', 'media', 'interaction'] as const;
 type FieldGroups = Pick<Config, (typeof fieldGroups)[number]>;

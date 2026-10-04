@@ -13,7 +13,7 @@
 | 浮窗 | Vue 3 + Shadow DOM | 独立窗口交互、配置文件代码、附件和核验结果 |
 | 样式 | 两侧独立 CSS，通过插件的 `?style` 导入 | 入口样式挂到 document，浮窗样式挂到 Shadow Root，支持开发热更新 |
 | 目录读取 | `input[type=file][webkitdirectory]` | 用户一次选择目录，取得文件及相对路径 |
-| 配置核心 | `packages/bilipack` | TOML 解析、结构校验、路径规则和类型 |
+| 配置核心 | `packages/bilipack` + Zod | TOML 语法解析、统一配置 schema、路径规则和推导类型 |
 | 页面适配 | `apps/monkey/src/bilibili` | 探测页面、操作原生控件、读取结果 |
 | 执行流程 | `apps/monkey/src/workflow` | 顺序执行步骤、处理依赖、收集结果 |
 
@@ -183,6 +183,10 @@ export default defineConfig({
 目录入口的用户点击直接触发文件选择。采用 `webkitdirectory` 获取 `FileList`，依据 `webkitRelativePath` 去掉共同的所选根目录，建立相对路径索引。浏览器提供的是用户选中的文件对象，不是可任意读取磁盘的绝对路径。[目录选择 API](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/webkitdirectory)
 
 视频保持为 `File` 引用，不读成 ArrayBuffer 或 Base64。只读取配置和实际需要的字幕文本、解码封面；临时 Object URL 在替换或清理时释放。取消目录选择返回空闲状态。
+
+配置定义集中在 `packages/bilipack/src/config/schema.ts`：采用 Zod 严格对象、字段转换与组合校验，作为结构和校验的唯一来源；`types.ts` 使用 `z.infer` 推导 `Config` 和 `Position`，继续从它们推导字段目标。`parse.ts` 保留 TOML 语法处理、裸日期预检、Zod issue 到中文诊断的适配及成功结果递归冻结，不另存字段种类表或配置结构。schema 不接收页面状态，不以适配器能力限制配置范围。按根声明的 pnpm 版本为库添加 Zod 运行时依赖并更新锁文件；API 依据 [Zod 官方文档](https://zod.dev/api)。
+
+迁移验收沿用公开 `parseConfig` API：覆盖需求示例、全部区块的未知字段、字段类型和组合错误、路径规范化、单图默认值及双图互斥、标签和字幕语言重复、日期时区与日历边界、显式值与省略、中文诊断路径及分类、嵌套数据冻结；同时运行 workspace 类型检查、测试和构建，确认应用消费的类型和用户脚本产物可用。
 
 修改页面前完成以下校验，错误汇总到字段路径：
 
