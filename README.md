@@ -13,12 +13,10 @@
 
 使用桌面浏览器和 [Tampermonkey](https://www.tampermonkey.net/) 扩展。
 
-1. 在浏览器中安装并启用 Tampermonkey。
-2. 打开 [GitHub Releases](https://github.com/yjl9903/bilipack/releases)，
-   选择版本并下载附件 **`bilipack.user.js`**。
-3. 用 Tampermonkey 安装该文件并启用 Bilipack。若下载后没有出现安装页，
-   可在 Tampermonkey 管理面板的「实用工具」中从文件导入。
-4. 打开或刷新 [B 站视频投稿页](https://member.bilibili.com/platform/upload/video/frame)。
+1. 在浏览器中安装并启用 Tampermonkey
+2. 打开 [GitHub Releases](https://github.com/yjl9903/bilipack/releases) 下载附件 **`bilipack.user.js`**
+3. 用 Tampermonkey 安装该文件并启用 Bilipack
+4. 打开 [B 站视频投稿页](https://member.bilibili.com/platform/upload/video/frame)
 
 ## 开始使用
 
