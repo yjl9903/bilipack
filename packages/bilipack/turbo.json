@@ -1,0 +1,21 @@
+{
+  "extends": [
+    "//"
+  ],
+  "tasks": {
+    "test:ci": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/docs/intent/README.md"
+      ]
+    },
+    "dev": {
+      "dependsOn": [
+        "build"
+      ],
+      "persistent": true,
+      "cache": false
+    }
+  }
+}

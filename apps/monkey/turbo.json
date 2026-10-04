@@ -1,0 +1,12 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "dev": {
+      "dependsOn": ["^build"],
+      "with": ["bilipack#dev"],
+      "persistent": true,
+      "cache": false
+    },
+    "preview": { "persistent": true, "cache": false }
+  }
+}

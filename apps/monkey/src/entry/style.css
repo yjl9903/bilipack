@@ -1,0 +1,132 @@
+#bilipack-upload-section,
+#bilipack-directory-entry,
+#bilipack-video-entry {
+  --bilipack-primary: #00a1d6;
+  --bilipack-primary-hover: #00b5e5;
+  --bilipack-primary-active: #008fbe;
+  --bilipack-text: #18191c;
+  --bilipack-muted: #9499a0;
+  --bilipack-border: #e3e5e7;
+}
+
+#bilipack-directory-entry,
+#bilipack-video-entry {
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 24px;
+  border: 1px solid var(--bilipack-primary);
+  border-radius: 4px;
+  background: var(--bilipack-primary);
+  color: #fff;
+  font:
+    400 14px/1.5 system-ui,
+    -apple-system,
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 150ms,
+    border-color 150ms;
+}
+
+#bilipack-directory-entry:hover:not(:disabled),
+#bilipack-video-entry:hover:not(:disabled) {
+  border-color: var(--bilipack-primary-hover);
+  background: var(--bilipack-primary-hover);
+}
+
+#bilipack-directory-entry:active:not(:disabled),
+#bilipack-video-entry:active:not(:disabled) {
+  border-color: var(--bilipack-primary-active);
+  background: var(--bilipack-primary-active);
+}
+
+#bilipack-directory-entry:disabled,
+#bilipack-video-entry:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#bilipack-upload-section {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  margin: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bilipack-text);
+  font:
+    400 14px/1.5 system-ui,
+    -apple-system,
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+}
+
+#bilipack-upload-section .bilipack-upload-area {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px 16px;
+}
+
+#bilipack-upload-section .bilipack-upload-cloud {
+  flex-shrink: 0;
+  width: 120px;
+  height: 83px;
+}
+
+#bilipack-upload-section .bilipack-upload-hint {
+  margin: 10px 0 24px;
+  color: #999;
+  font-size: 13px;
+  text-align: center;
+}
+
+#bilipack-upload-section .bilipack-upload-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+}
+
+#bilipack-directory-entry,
+#bilipack-video-entry {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  border-radius: 6px;
+  padding: 0 12px;
+  margin: 0;
+}
+
+#bilipack-upload-section .bilipack-upload-error {
+  margin: 12px 0 0;
+  color: #c53b3b;
+  text-align: center;
+}
+
+#bilipack-upload-section.dragging {
+  outline: 2px dashed var(--bilipack-primary);
+  outline-offset: -2px;
+}
+
+#bilipack-directory-entry:focus-visible,
+#bilipack-video-entry:focus-visible {
+  outline: 2px solid var(--bilipack-primary);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #bilipack-directory-entry,
+  #bilipack-video-entry {
+    transition: none;
+  }
+}

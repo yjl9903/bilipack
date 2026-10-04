@@ -1,0 +1,50 @@
+:host {
+  --bilipack-primary: #00a1d6;
+  --bilipack-primary-hover: #00b5e5;
+  --bilipack-primary-active: #008fbe;
+  --bilipack-text: #18191c;
+  --bilipack-muted: #9499a0;
+  --bilipack-border: #e3e5e7;
+}
+
+:host button.primary {
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 24px;
+  border: 1px solid var(--bilipack-primary);
+  border-radius: 4px;
+  background: var(--bilipack-primary);
+  color: #fff;
+  font:
+    400 14px/1.5 system-ui,
+    -apple-system,
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 150ms,
+    border-color 150ms;
+}
+
+:host button.primary:hover:not(:disabled) {
+  border-color: var(--bilipack-primary-hover);
+  background: var(--bilipack-primary-hover);
+}
+
+:host button.primary:active:not(:disabled) {
+  border-color: var(--bilipack-primary-active);
+  background: var(--bilipack-primary-active);
+}
+
+:host button.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host button.primary {
+    transition: none;
+  }
+}

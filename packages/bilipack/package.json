@@ -28,9 +28,13 @@
   ],
   "scripts": {
     "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
     "test": "vitest",
     "test:ci": "vitest --run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "smol-toml": "1.9.0"
   },
   "engines": {
     "node": ">=v24.0.0"
