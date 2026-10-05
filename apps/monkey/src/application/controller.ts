@@ -53,14 +53,20 @@ export function createController(adapter: PageAdapter) {
         adapter,
         signal
       },
-      (results, currentStep) =>
+      (results, currentStep) => {
+        const observing = currentStep?.phase === 'observe';
         publish({
           results,
           currentStep,
-          ...(adapter.context().submissionWaiting
-            ? { panelStatus: 'submission-wait' as const, canWrite: false }
+          ...(observing
+            ? {
+                panelStatus: 'video-wait' as const,
+                canWrite: false,
+                summary: '表单操作已结束，可继续编辑；正在等待视频上传完成。'
+              }
             : {})
-        }),
+        });
+      },
       previous
     );
     const currentPage = adapter.context();
@@ -75,14 +81,8 @@ export function createController(adapter: PageAdapter) {
     publish({
       results,
       canWrite: retryWrite,
-      summary: currentPage.submissionWaiting
-        ? '已进入平台投稿等待；已核验字段保留投稿前结论。视频上传与投稿结果请查看平台，未完成项目请查看校验结果。'
-        : summarize(results),
-      panelStatus: interrupted
-        ? 'interrupted'
-        : currentPage.submissionWaiting
-          ? 'submission-wait'
-          : executionStatus(results)
+      summary: summarize(results),
+      panelStatus: interrupted ? 'interrupted' : executionStatus(results)
     });
   };
   const reportError = (error: unknown, signal: AbortSignal) => {
@@ -143,13 +143,12 @@ export function createController(adapter: PageAdapter) {
             : state.panelInitiallyExpanded
       });
       if (page.target && page.submissionWaiting) {
-        if (bound && samePage(bound, page)) bound.submissionWaiting = true;
         reviewPage = undefined;
         retryResults = undefined;
         publish({
           canWrite: false,
-          panelStatus: 'submission-wait',
-          summary: '已进入平台投稿等待；保留投稿前已核验结果，等待独立确认视频上传完成。'
+          panelStatus: state.busy || !state.panelStatus ? 'video-wait' : state.panelStatus,
+          summary: state.busy ? '正在等待视频上传完成。' : state.summary
         });
       }
       if (reviewPage && !samePage(reviewPage, page)) {
@@ -158,7 +157,7 @@ export function createController(adapter: PageAdapter) {
         publish({
           canWrite: false,
           panelStatus: 'interrupted',
-          summary: '页面或稿件已变化，请重新选择目录后比对。'
+          summary: '页面或稿件已变化，请重新选择目录。'
         });
       }
       if (bound && active && !matchesContext(bound, page)) {
@@ -253,7 +252,7 @@ export function createController(adapter: PageAdapter) {
             results,
             canWrite: true,
             panelStatus: 'awaiting-write',
-            summary: '比对完成，尚未写入。请查看校验结果后点击「写入配置」。'
+            summary: '比对完成，请确认结果后点击「写入配置」。'
           });
         } else {
           await execute(prepared, bound, signal);

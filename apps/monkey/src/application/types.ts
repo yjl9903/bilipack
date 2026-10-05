@@ -38,7 +38,7 @@ export type PanelStatus =
   | 'comparing'
   | 'awaiting-write'
   | 'executing'
-  | 'submission-wait'
+  | 'video-wait'
   | 'completed'
   | 'attention'
   | 'error'

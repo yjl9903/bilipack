@@ -35,7 +35,7 @@ export type Step = {
   capability?: { field: string; value?: unknown };
   /** Re-run prerequisite actions even when the previous result verified. */
   retry?: 'execute';
-  /** The only permission for observation after the user has queued submission. */
+  /** Read-only observation hands the page back and prevents later form operations. */
   allowDuringSubmission?: boolean;
   /** Assignment can unblock dependents while a later step supplies completion evidence. */
   pendingCompletion?: { step: string; verifiedMessage: string; unverifiedMessage: string };
@@ -48,7 +48,7 @@ export type Step = {
 );
 
 export interface Progress {
-  phase: 'execute' | 'verify' | 'final-read' | 'repair' | 'compare' | 'compared';
+  phase: 'execute' | 'verify' | 'observe' | 'repair' | 'compare' | 'compared';
   id?: string;
 }
 export interface StepGroup {

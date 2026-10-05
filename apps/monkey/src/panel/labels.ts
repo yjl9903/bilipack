@@ -87,7 +87,7 @@ export function progressLabel(
   const phases = {
     execute: '正在执行',
     verify: '正在核验',
-    'final-read': '最终读回',
+    observe: '等待视频',
     repair: '正在修复',
     compare: '正在比对'
   };
@@ -116,7 +116,7 @@ export const panelStatusLabels = {
   preparing: '准备中',
   comparing: '比对中',
   'awaiting-write': '待写入',
-  'submission-wait': '投稿等待',
+  'video-wait': '视频上传中',
   executing: '执行中',
   completed: '已完成',
   attention: '待处理',

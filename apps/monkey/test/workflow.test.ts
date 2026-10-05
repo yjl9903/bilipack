@@ -6,7 +6,7 @@ import { run } from '../src/workflow/run';
 import { summarize } from '../src/application/presentation';
 import { mockAdapter, context, cover } from './helpers';
 describe('workflow invariants', () => {
-  it('repairs tags drifting after the video settles during final readback', async () => {
+  it('retains step evidence without repairing tags changed after video completion', async () => {
     let actual: string[] = [];
     const a = mockAdapter({
       applyField: vi.fn(async (target) => {
@@ -23,11 +23,11 @@ describe('workflow invariants', () => {
     });
     const c = context({ config: { info: { tags: ['保留', '补齐'] } } }, a);
     const results = await run(plan(c.prepared, c.page), c);
-    expect(actual).toEqual(['保留', '补齐']);
-    expect(a.applyField).toHaveBeenCalledTimes(2);
+    expect(actual).toEqual(['保留', '风景']);
+    expect(a.applyField).toHaveBeenCalledOnce();
     expect(results.find((r) => r.id === 'info.tags')?.status).toBe('verified');
   });
-  it('confirms both covers as one batch and reads each ratio again at the end', async () => {
+  it('confirms both covers as one batch and verifies each ratio after applying', async () => {
     const covers = [
       cover('16:9', 'wide.png', 'blob:wide'),
       cover('4:3', 'standard.png', 'blob:standard')
@@ -39,7 +39,7 @@ describe('workflow invariants', () => {
     const c = context({ covers }, a);
     const results = await run(plan(c.prepared, c.page), c);
     expect(a.applyCovers).toHaveBeenCalledExactlyOnceWith(covers, c.signal, c.page);
-    expect(a.verifyCover).toHaveBeenCalledTimes(4);
+    expect(a.verifyCover).toHaveBeenCalledTimes(2);
     expect(results.filter((r) => r.id.startsWith('cover.')).map((r) => r.status)).toEqual([
       'verified',
       'verified'
@@ -67,7 +67,7 @@ describe('workflow invariants', () => {
     expect(a.applyField).not.toHaveBeenCalled();
     expect(results.find((result) => result.id === 'info.title')?.status).toBe('blocked');
     expect(results.find((result) => result.id === 'video.ready')?.status).toBe('verified');
-    expect(summarize(results)).not.toContain('准备完成');
+    expect(summarize(results)).not.toContain('确认后自行提交或保存');
   });
   it('stops after identity changes and never replays an attachment', async () => {
     let changed = false;
@@ -112,19 +112,17 @@ describe('workflow invariants', () => {
     await run(plan(d.prepared, d.page), d);
     expect(b.applyField).toHaveBeenCalledOnce();
   });
-  it('final readback catches asynchronous overwrites', async () => {
-    let reads = 0;
-    const a = mockAdapter({
-      verifyField: async () => ({
-        matches: ++reads === 1,
-        actual: reads === 1 ? '目标' : 'reset',
-        message: 'readback'
-      })
+  it('keeps the immediate field evidence without reading it again at the end', async () => {
+    const verifyField = vi.fn(async () => ({ matches: true, actual: '目标', message: 'readback' }));
+    const a = mockAdapter({ verifyField });
+    const c = context({}, a);
+    const results = await run(plan(c.prepared, c.page), c);
+    expect(verifyField).toHaveBeenCalledOnce();
+    expect(results.find((result) => result.id === 'info.title')).toMatchObject({
+      status: 'verified',
+      actual: '目标',
+      message: 'readback'
     });
-    const c = context({}, a),
-      r = await run(plan(c.prepared, c.page), c);
-    expect(r.find((result) => result.id === 'info.title')?.status).toBe('unverified');
-    expect(summarize(r)).toContain('未完成项目');
   });
   it('treats a triggered upload as incomplete until actual video verification', async () => {
     const a = mockAdapter({
@@ -143,7 +141,7 @@ describe('workflow invariants', () => {
     expect(a.uploadVideo).toHaveBeenCalledOnce();
     expect(a.applyField).toHaveBeenCalledOnce();
     expect(r[0].status).toBe('unverified');
-    expect(summarize(r)).not.toContain('准备完成');
+    expect(summarize(r)).not.toContain('确认后自行提交或保存');
   });
 });
 
@@ -207,7 +205,6 @@ it('reports pending, executing, readback, failures and blocked dependencies as t
     statuses: ['verifying', 'pending', 'pending'],
     current: '正在核验：good'
   });
-  expect(snapshots.some((s) => s.current === '最终读回：good')).toBe(true);
   expect(results.map((r) => r.status)).toEqual(['verified', 'failed', 'blocked']);
   expect(snapshots.at(-1)?.current).toBeUndefined();
 });
@@ -263,15 +260,14 @@ it.each([false, true])(
       'info.tags',
       'subtitle',
       'subtitle-readback',
-      'upload-complete',
-      'subtitle-readback'
+      'upload-complete'
     ]);
     expect(a.applySubtitle).toHaveBeenCalledOnce();
     expect(result.find((r) => r.id === 'subtitles.中文')?.status).toBe('verified');
     expect(result.find((r) => r.id === 'video.ready')?.status).toBe(
       uploadFails ? 'failed' : 'verified'
     );
-    if (uploadFails) expect(summarize(result)).not.toContain('准备完成');
+    if (uploadFails) expect(summarize(result)).not.toContain('确认后自行提交或保存');
   }
 );
 
@@ -339,7 +335,7 @@ it('skips unsupported targets and their dependents while continuing supported fi
     skipReason: 'unsupported'
   });
   expect(results.some((r) => r.status === 'blocked' || r.status === 'failed')).toBe(false);
-  expect(summarize(results)).toContain('已跳过');
+  expect(summarize(results)).toContain('含不支持的项目');
 });
 
 it('retries a partially failed cover group once without reuploading successful subtitles', async () => {

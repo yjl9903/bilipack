@@ -46,23 +46,19 @@ export async function run(
     );
     notify();
   };
-  let submissionSeen = false;
   const submissionWaiting = () => {
     const page = context.adapter.context();
-    const waiting =
-      !!page.submissionWaiting && matchesContext(context.page, page) && page.count === 1;
-    submissionSeen ||= waiting || !!context.page.submissionWaiting;
-    return waiting;
+    return !!page.submissionWaiting && matchesContext(context.page, page) && page.count === 1;
   };
   const assert = () => {
-    submissionWaiting();
     context.signal.throwIfAborted();
     context.adapter.assertContext(context.page);
   };
+  let observing = false;
   const verify = async (step: Step) => {
     let evidence = await step.verify(context);
     assert();
-    if (!evidence.matches && step.repair && !submissionWaiting()) {
+    if (!evidence.matches && step.repair && !observing && !submissionWaiting()) {
       if (step.capability) {
         const capability = context.adapter.capability(step.capability.field, step.capability.value);
         if (!capability.available) throw new Error(capability.reason);
@@ -92,8 +88,8 @@ export async function run(
       emit({ status: 'blocked', message: (e as Error).message });
       continue;
     }
-    if (submissionWaiting() && !step.allowDuringSubmission) {
-      emit({ status: 'blocked', message: '已进入投稿等待，未执行或核验本项' });
+    if ((observing || submissionWaiting()) && !step.allowDuringSubmission) {
+      emit({ status: 'blocked', message: '页面已交还用户，未执行或核验本项' });
       continue;
     }
     if (step.skip) {
@@ -134,9 +130,13 @@ export async function run(
       continue;
     }
     try {
+      observing ||= !!step.allowDuringSubmission;
       if (!completed.has(step.id)) {
-        currentStep = { phase: 'execute', id: step.id };
-        emit({ status: 'running', message: '正在执行' });
+        currentStep = { phase: observing ? 'observe' : 'execute', id: step.id };
+        emit({
+          status: 'running',
+          message: observing ? '页面已交还用户，仅观察视频状态' : '正在执行'
+        });
         if (step.group) {
           const group = step.group;
           if (!groups.has(group.id)) groups.set(group.id, group.execute(context));
@@ -146,7 +146,7 @@ export async function run(
       }
       if (submissionWaiting() && !step.allowDuringSubmission)
         throw new Error('已进入投稿等待，本项尚未确认');
-      currentStep = { phase: 'verify', id: step.id };
+      currentStep = { phase: observing ? 'observe' : 'verify', id: step.id };
       emit({ status: 'verifying', message: '正在读取页面结果' });
       const evidence = await verify(step);
       if (submissionWaiting() && !step.allowDuringSubmission)
@@ -171,52 +171,6 @@ export async function run(
       } catch {
         interrupted = true;
       }
-    }
-  }
-  // Read all applied targets again after uploads and dependent controls have settled.
-  for (const result of results) {
-    if (result.status !== 'verified') continue;
-    const step = steps.find((s) => s.id === result.id)!;
-    const verified = { ...result };
-    const preserve = (message = '投稿前已核验') =>
-      update(step.id, {
-        ...verified,
-        message: `${message}；${verified.message}`
-      });
-    if (submissionWaiting() && !step.allowDuringSubmission) {
-      preserve();
-      continue;
-    }
-    try {
-      assert();
-      currentStep = { phase: 'final-read', id: step.id };
-      update(step.id, { status: 'verifying', message: '正在最终读回' });
-      const evidence = await verify(step);
-      if (submissionWaiting() && !step.allowDuringSubmission) {
-        preserve();
-        continue;
-      }
-      update(step.id, {
-        status: evidence.matches ? 'verified' : 'unverified',
-        actual: evidence.actual,
-        message: evidence.message
-      });
-    } catch (e) {
-      submissionWaiting();
-      const page = context.adapter.context();
-      const contextLost = context.signal.aborted || !matchesContext(context.page, page);
-      if (
-        contextLost ||
-        (submissionSeen && !step.allowDuringSubmission && !step.pendingCompletion)
-      ) {
-        preserve(submissionSeen ? '投稿前已核验' : '此前已核验；页面变化后未重新核验');
-        continue;
-      }
-      update(step.id, {
-        status: 'unverified',
-        message: (e as Error).message,
-        ...(e instanceof FieldReadbackError ? { actual: e.actual } : {})
-      });
     }
   }
   for (const step of steps) {

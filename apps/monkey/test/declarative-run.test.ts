@@ -126,3 +126,42 @@ it('continues declared observation after an in-flight form operation fails in su
   expect(lateWrite).not.toHaveBeenCalled();
   expect(observe).toHaveBeenCalledOnce();
 });
+
+it.each([false, true])(
+  'never resumes form operations after observation starts (submission: %s)',
+  async (submission) => {
+    const adapter = mockAdapter();
+    let page = adapter.context();
+    adapter.context = () => page;
+    const lateWrite = vi.fn(async () => {});
+    const lateRead = vi.fn(() => ({ matches: true, message: 'unused' }));
+    const repair = vi.fn(async () => {});
+    const results = await run(
+      [
+        {
+          id: 'observe',
+          role: 'condition',
+          dependsOn: [],
+          allowDuringSubmission: true,
+          execute: async () => {
+            page = { ...page, submissionWaiting: submission };
+          },
+          verify: () => ({ matches: false, message: '未确认视频完成' }),
+          repair
+        },
+        {
+          id: 'late-form',
+          role: 'target',
+          dependsOn: [],
+          execute: lateWrite,
+          verify: lateRead
+        }
+      ],
+      context({}, adapter)
+    );
+    expect(results.map((r) => r.status)).toEqual(['unverified', 'blocked']);
+    expect(lateWrite).not.toHaveBeenCalled();
+    expect(lateRead).not.toHaveBeenCalled();
+    expect(repair).not.toHaveBeenCalled();
+  }
+);

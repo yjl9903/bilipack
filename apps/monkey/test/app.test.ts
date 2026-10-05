@@ -162,7 +162,7 @@ it('shows live execution in the title, summary and validation until the run ends
   );
   finish();
   await vi.waitFor(() =>
-    expect(host.querySelector('.summary-message')?.textContent).toContain('准备完成')
+    expect(host.querySelector('.summary-message')?.textContent).toContain('确认后自行提交或保存')
   );
   await nextTick();
   expect(host.querySelector('.panel-heading .loading-spinner')).toBeNull();
@@ -219,7 +219,7 @@ it('uses the same write button after an unsuccessful write', async () => {
   expect(host.querySelectorAll('.write-configuration')).toHaveLength(1);
   write.click();
   await vi.waitFor(() =>
-    expect(host.querySelector('.summary-message')?.textContent).toContain('准备完成')
+    expect(host.querySelector('.summary-message')?.textContent).toContain('确认后自行提交或保存')
   );
   expect(adapter.applyField).toHaveBeenCalledTimes(2);
 });

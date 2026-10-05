@@ -84,7 +84,7 @@ it.each([false, true])(
       ctx
     );
     expect(results[0]).toMatchObject({ status: 'verified', actual: '目标标题' });
-    expect(results[0].message).toContain('此前已核验');
+    expect(results[0].message).toBe('一致');
     expect(read).toHaveBeenCalledOnce();
     expect(results[1].status).not.toBe('verified');
   }
@@ -170,7 +170,7 @@ it.each([true, false])(
     const results = await run(steps, context({}, adapter));
     expect(verify).toHaveBeenCalledTimes(3);
     expect(results.slice(0, 3).map((r) => r.status)).toEqual(['verified', 'verified', 'verified']);
-    expect(results.slice(0, 3).every((r) => r.message.includes('投稿前已核验'))).toBe(true);
+    expect(results.slice(0, 3).every((r) => r.message === '一致')).toBe(true);
     expect(results.at(-1)?.status).toBe(ready ? 'verified' : 'unverified');
   }
 );
@@ -217,33 +217,6 @@ it('stops remaining form operations after the user queues submission', async () 
   expect(results[2].status).toBe('verified');
 });
 
-it('preserves earlier evidence when submission starts during final readback', async () => {
-  const adapter = mockAdapter();
-  let page = { ...adapter.context(), submissionWaiting: false },
-    calls = 0;
-  adapter.context = () => page;
-  const results = await run(
-    [
-      {
-        id: 'info.title',
-        role: 'target' as const,
-        dependsOn: [],
-        execute: async () => {},
-        verify: async () => {
-          if (++calls === 2) {
-            page = { ...page, submissionWaiting: true };
-            throw new Error('表单已消失');
-          }
-          return { matches: true, actual: '已读回标题', message: '一致' };
-        }
-      }
-    ],
-    context({}, adapter)
-  );
-  expect(results[0]).toMatchObject({ status: 'verified', actual: '已读回标题' });
-  expect(results[0].message).toContain('投稿前已核验');
-});
-
 it('keeps the panel visible and disables writes during native submission waiting', async () => {
   const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (
     this: HTMLInputElement
@@ -264,14 +237,14 @@ it('keeps the panel visible and disables writes during native submission waiting
   adapter.waitVideo = async () => {
     page = { ...page, submissionWaiting: true, editor: false };
     controller.updatePage(page);
-    expect(state.panelStatus).toBe('submission-wait');
+    expect(state.panelStatus).toBe('video-wait');
     expect(state.panelVisible).toBe(true);
     expect(state.canWrite).toBe(false);
   };
   try {
     await controller.importDirectory();
     await controller.writeConfiguration();
-    expect(state.panelStatus).toBe('submission-wait');
+    expect(state.panelStatus).toBe('completed');
     expect(state.results.find((r) => r.id === 'info.title')?.status).toBe('verified');
     expect(adapter.applyField).toHaveBeenCalledOnce();
     await controller.writeConfiguration();

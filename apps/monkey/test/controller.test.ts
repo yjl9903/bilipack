@@ -12,70 +12,85 @@ function selectFiles(files: File[]) {
   });
 }
 afterEach(() => vi.restoreAllMocks());
-it('fills the editor while upload is pending and streams step state before completion', async () => {
-  const video = file('p/video.mp4');
-  selectFiles([file('p/bilipack.toml', '[video]\nfile="video.mp4"\n[info]\ntitle="目标"'), video]);
-  const adapter = mockAdapter();
-  let page = {
-    ...adapter.context(),
-    video: 'absent' as 'absent' | 'uploading' | 'ready',
-    count: 0
-  };
-  adapter.context = () => ({ ...page });
-  const uploadPage = adapter.context();
-  const controller = createController(adapter);
-  adapter.uploadVideo = vi.fn(async () => {
-    page = { ...page, video: 'uploading', count: 1 };
+it.each([false, true])(
+  'hands the form back while observing video (native submission wait: %s)',
+  async (submissionWaiting) => {
+    const video = file('p/video.mp4');
+    selectFiles([
+      file('p/bilipack.toml', '[video]\nfile="video.mp4"\n[info]\ntitle="目标"'),
+      video
+    ]);
+    const adapter = mockAdapter();
+    const verifyField = vi.spyOn(adapter, 'verifyField');
+    let page = {
+      ...adapter.context(),
+      video: 'absent' as 'absent' | 'uploading' | 'ready',
+      count: 0
+    };
+    adapter.context = () => ({ ...page });
+    const uploadPage = adapter.context();
+    const controller = createController(adapter);
+    adapter.uploadVideo = vi.fn(async () => {
+      page = { ...page, video: 'uploading', count: 1 };
+      controller.updatePage(page);
+      expect(adapter.applyField).not.toHaveBeenCalled();
+    });
+    adapter.waitEditor = vi.fn(async () => {
+      expect(page.video).toBe('uploading');
+      expect(adapter.applyField).not.toHaveBeenCalled();
+    });
+    let finishUpload!: () => void;
+    const uploaded = new Promise<void>((resolve) => {
+      finishUpload = resolve;
+    });
+    adapter.waitVideo = vi.fn(async () => {
+      expect(adapter.applyField).toHaveBeenCalledOnce();
+      await uploaded;
+      page = { ...page, video: 'ready' };
+      controller.updatePage(page);
+    });
+    let state!: ViewState;
+    controller.subscribe((s) => {
+      state = s;
+    });
+    const job = controller.importDirectory();
+    await vi.waitFor(() => expect(adapter.waitVideo).toHaveBeenCalledOnce());
+    expect(state.busy).toBe(true);
+    expect(progressLabel(state.currentStep!)).toContain('确认视频上传完成');
+    expect(state.panelStatus).toBe('video-wait');
+    expect(state.canWrite).toBe(false);
+    expect(state.summary).toContain('可继续编辑');
+    page = { ...page, submissionWaiting };
     controller.updatePage(page);
-    expect(adapter.applyField).not.toHaveBeenCalled();
-  });
-  adapter.waitEditor = vi.fn(async () => {
-    expect(page.video).toBe('uploading');
-    expect(adapter.applyField).not.toHaveBeenCalled();
-  });
-  let finishUpload!: () => void;
-  const uploaded = new Promise<void>((resolve) => {
-    finishUpload = resolve;
-  });
-  adapter.waitVideo = vi.fn(async () => {
+    expect(state.panelStatus).toBe('video-wait');
+    verifyField.mockResolvedValue({ matches: false, actual: '用户修改', message: '用户已接手' });
+    expect(state.results.find((r) => r.id === 'info.title')?.status).toBe('verified');
+    expect(state.results.find((r) => r.id === 'video.ready')?.status).toBe('running');
+    expect(state.results.find((r) => r.id === 'video.upload')?.status).toBe('waiting');
+    const pendingSnapshot = state.results;
+    finishUpload();
+    await job;
+    expect(pendingSnapshot.find((r) => r.id === 'video.ready')?.status).toBe('running');
+    expect(state.busy).toBe(false);
+    expect(state.currentStep).toBeUndefined();
+    expect(adapter.uploadVideo).toHaveBeenCalledExactlyOnceWith(
+      video,
+      expect.any(AbortSignal),
+      uploadPage
+    );
+    expect(adapter.waitVideo).toHaveBeenCalledOnce();
     expect(adapter.applyField).toHaveBeenCalledOnce();
-    await uploaded;
-    page = { ...page, video: 'ready' };
-    controller.updatePage(page);
-  });
-  let state!: ViewState;
-  controller.subscribe((s) => {
-    state = s;
-  });
-  const job = controller.importDirectory();
-  await vi.waitFor(() => expect(adapter.waitVideo).toHaveBeenCalledOnce());
-  expect(state.busy).toBe(true);
-  expect(progressLabel(state.currentStep!)).toContain('确认视频上传完成');
-  expect(state.panelStatus).toBe('executing');
-  expect(state.results.find((r) => r.id === 'info.title')?.status).toBe('verified');
-  expect(state.results.find((r) => r.id === 'video.ready')?.status).toBe('running');
-  expect(state.results.find((r) => r.id === 'video.upload')?.status).toBe('waiting');
-  const pendingSnapshot = state.results;
-  finishUpload();
-  await job;
-  expect(pendingSnapshot.find((r) => r.id === 'video.ready')?.status).toBe('running');
-  expect(state.busy).toBe(false);
-  expect(state.currentStep).toBeUndefined();
-  expect(adapter.uploadVideo).toHaveBeenCalledExactlyOnceWith(
-    video,
-    expect.any(AbortSignal),
-    uploadPage
-  );
-  expect(adapter.waitVideo).toHaveBeenCalledOnce();
-  expect(adapter.applyField).toHaveBeenCalledOnce();
-  expect(state.results.map((r) => [r.id, r.status])).toEqual([
-    ['video.upload', 'verified'],
-    ['editor.ready', 'verified'],
-    ['info.title', 'verified'],
-    ['video.ready', 'verified']
-  ]);
-  controller.dispose();
-});
+    expect(verifyField).toHaveBeenCalledOnce();
+    expect(state.panelStatus).toBe('completed');
+    expect(state.results.map((r) => [r.id, r.status])).toEqual([
+      ['video.upload', 'verified'],
+      ['editor.ready', 'verified'],
+      ['info.title', 'verified'],
+      ['video.ready', 'verified']
+    ]);
+    controller.dispose();
+  }
+);
 it('keeps invalid original source for inspection without writing the page', async () => {
   const raw = '# kept comment\n[info]\ntitel="wrong"\n';
   selectFiles([file('p/bilipack.toml', raw)]);
@@ -216,7 +231,7 @@ it('settles live progress and preserves earlier subtitle evidence when a route c
     state.results.some((r) => ['running', 'pending', 'verifying', 'waiting'].includes(r.status))
   ).toBe(false);
   expect(state.results.find((r) => r.id === 'subtitles.中文')?.status).toBe('verified');
-  expect(state.results.find((r) => r.id === 'subtitles.中文')?.message).toContain('此前已核验');
+  expect(state.results.find((r) => r.id === 'subtitles.中文')?.message).toBe('done');
   expect(state.panelStatus).toBe('interrupted');
   expect(adapter.applySubtitle).toHaveBeenCalledOnce();
   controller.dispose();

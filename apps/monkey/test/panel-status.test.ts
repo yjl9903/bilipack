@@ -44,7 +44,7 @@ it('keeps unsupported targets and their dependents visible as unfinished work', 
     message: '依赖未接入'
   };
   expect(executionStatus([unsupported, dependent])).toBe('attention');
-  expect(summarize([unsupported, dependent])).toContain('未完成项目');
+  expect(summarize([unsupported, dependent])).toContain('部分项目未完成');
   expect(executionStatus([result('info.title', 'verified'), unsupported])).toBe('attention');
 });
 

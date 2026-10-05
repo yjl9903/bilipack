@@ -2,13 +2,13 @@ import type { Result } from '../workflow/types';
 import type { Prepared } from '../input/types';
 import type { Attachment, PanelStatus } from './types';
 export function summarize(results: readonly Result[]): string {
-  if (!results.length) return '未执行';
+  if (!results.length) return '暂无执行结果。';
   const status = executionStatus(results);
-  if (status === 'completed') return '本次准备完成，请检查原生表单并自行提交';
-  if (status === 'error') return '未执行或执行中断；已保留页面现场';
+  if (status === 'completed') return '请检查投稿表单，确认后自行提交或保存。';
+  if (status === 'error') return '操作未完成，请查看结果。';
   if (results.some((r) => r.skipReason))
-    return '存在未完成项目；未支持或依赖未支持的项目已跳过，请查看校验结果。';
-  return '存在未完成项目，请查看校验结果并处理；已保留现场';
+    return '部分项目未完成，含不支持的项目，请查看结果。';
+  return '部分项目未完成，请查看结果并处理。';
 }
 
 export function executionStatus(results: readonly Result[]): PanelStatus {

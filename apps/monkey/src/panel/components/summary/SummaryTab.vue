@@ -29,10 +29,16 @@ const writeReasonId = useId();
 
 <template>
   <p v-if="state.busy" class="progress-message" role="status">
-    {{ state.currentStep ? progressLabel(state.currentStep) : '正在准备执行' }}
+    {{
+      state.panelStatus === 'video-wait'
+        ? state.summary
+        : state.currentStep
+          ? progressLabel(state.currentStep)
+          : '正在准备…'
+    }}
   </p>
   <p v-else class="summary-message" aria-live="polite">
-    {{ state.summary || '本次导入的结果将在这里显示。' }}
+    {{ state.summary || '导入后查看结果。' }}
   </p>
   <section
     v-if="unsuccessful.length"

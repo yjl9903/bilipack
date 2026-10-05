@@ -15,20 +15,18 @@ it('keeps tag verification read-only and declares repair separately', async () =
   expect(step.repair).toBeTypeOf('function');
 });
 
-it('reports an explicit repair phase for late tag drift and reads the repaired value', async () => {
+it('reports an explicit repair phase when immediate tag verification fails', async () => {
   let tags = ['原有'];
+  let writes = 0;
   const adapter = mockAdapter({
     applyField: vi.fn(async () => {
-      tags = ['目标'];
+      tags = ++writes === 1 ? ['推荐'] : ['目标'];
     }),
     verifyField: vi.fn(async () => ({
       matches: tags.join() === '目标',
       actual: [...tags],
       message: '读回'
-    })),
-    waitVideo: vi.fn(async () => {
-      tags = ['推荐'];
-    })
+    }))
   });
   const c = context({ config: { info: { tags: ['目标'] } } }, adapter);
   const phases: Progress[] = [];
@@ -128,7 +126,7 @@ it('reapplies the whole group before readback when a previously skipped member b
     }
   ];
   const results = await run(steps, context(), undefined, previous);
-  expect(operations).toEqual(['apply', 'wide', 'standard', 'wide', 'standard']);
+  expect(operations).toEqual(['apply', 'wide', 'standard']);
   expect(results.every((result) => result.status === 'verified')).toBe(true);
 });
 
