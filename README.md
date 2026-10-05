@@ -1,6 +1,6 @@
 # Bilipack
 
-[![Tampermonkey](https://img.shields.io/badge/Tampermonkey-00485B?logo=tampermonkey&logoColor=white)](https://www.tampermonkey.net/)
+[![Tampermonkey](https://img.shields.io/badge/Tampermonkey-00485B?logo=tampermonkey&logoColor=white)](https://github.com/yjl9903/bilipack/releases/latest/download/bilipack.user.js)
 [![Release](https://img.shields.io/github/v/release/yjl9903/bilipack?include_prereleases)](https://github.com/yjl9903/bilipack/releases)
 [![CI](https://github.com/yjl9903/bilipack/actions/workflows/ci.yml/badge.svg)](https://github.com/yjl9903/bilipack/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/github/license/yjl9903/bilipack)](LICENSE)
@@ -14,12 +14,8 @@
 
 ## 下载与安装
 
-使用桌面浏览器和 [Tampermonkey](https://www.tampermonkey.net/) 扩展。
-
-1. 在浏览器中安装并启用 Tampermonkey
-2. 打开 [GitHub Releases](https://github.com/yjl9903/bilipack/releases) 下载附件 **`bilipack.user.js`**
-3. 用 Tampermonkey 安装该文件并启用 Bilipack
-4. 打开 [B 站视频投稿页](https://member.bilibili.com/platform/upload/video/frame)
+1. 安装并启用 [Tampermonkey](https://www.tampermonkey.net/)
+2. 点击 [安装 Bilipack](https://github.com/yjl9903/bilipack/releases/latest/download/bilipack.user.js)，确认安装
 
 ## 开始使用
 

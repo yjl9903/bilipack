@@ -24,12 +24,15 @@ export default defineConfig({
         userscript: {
           name: 'Bilipack',
           namespace: 'https://github.com/yjl9903/bilipack',
+          author: 'OneKuma',
+          homepageURL: 'https://github.com/yjl9903/bilipack',
+          supportURL: 'https://github.com/yjl9903/bilipack/issues',
           version: pkg.version,
           updateURL:
             'https://github.com/yjl9903/bilipack/releases/latest/download/bilipack.meta.js',
           downloadURL:
             'https://github.com/yjl9903/bilipack/releases/latest/download/bilipack.user.js',
-          description: '从视频包填写 B 站投稿信息并核验结果',
+          description: '让 AI Agent 将素材与文案整理成视频包，用 Bilipack 一次导入 B 站投稿',
           match: ['https://member.bilibili.com/*'],
           'run-at': 'document-idle',
           noframes: true
