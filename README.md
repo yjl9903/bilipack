@@ -1,6 +1,9 @@
 # Bilipack
 
+[![Tampermonkey](https://img.shields.io/badge/Tampermonkey-00485B?logo=tampermonkey&logoColor=white)](https://www.tampermonkey.net/)
+[![Release](https://img.shields.io/github/v/release/yjl9903/bilipack?include_prereleases)](https://github.com/yjl9903/bilipack/releases)
 [![CI](https://github.com/yjl9903/bilipack/actions/workflows/ci.yml/badge.svg)](https://github.com/yjl9903/bilipack/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/github/license/yjl9903/bilipack)](LICENSE)
 
 **让 AI Agent 将素材与文案整理成视频包，用 Bilipack 一次导入 B 站投稿**
 
