@@ -12,6 +12,8 @@
 - 在 B 站官方页面上, 使用 Bilipack 上传视频包
 - 交回你做最后检查和确认投稿
 
+https://github.com/user-attachments/assets/d65a9606-c0ab-4e24-8e11-ff9ee38b034b
+
 ## 下载与安装
 
 1. 安装并启用 [Tampermonkey](https://www.tampermonkey.net/)
