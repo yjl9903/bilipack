@@ -36,6 +36,8 @@ export type Attachment = VideoAttachment | CoverAttachment | SubtitleAttachment;
 
 Attachment 按 type 区分三种附件：视频必须带 file，封面必须带 cover 和 url，字幕必须带 language 和 source。组件只接收对应类型，不兼容缺少内部必需信息的附件；没有附件时以空集合表达。它们描述本地素材，不是平台上传成功的证明。资源由准备与协调流程管理，组件展示预览不能自行把结果标为通过。
 
+封面的附件元信息与结果目标文件名来自 `CoverImage.source.file`，不展示内部裁剪预览文件名。预览、结果及进度统一使用「个人空间封面（16:9）」「首页推荐封面（4:3）」名称。
+
 ## 3. 按页面起点推进交互
 
 空白页在预检通过后进入执行；已有视频页面先只读比对，controller 发布差异及可否写入，等待用户点击「写入配置」。写入前再次确认仍为同一稿件；页面变化使此前待写入状态失效。
@@ -66,6 +68,7 @@ export interface ViewState {
 
 - `raw`、`attachments` 保留本次输入供用户检查。
 - `results`、`summary` 展示核验结论与未完成原因，不能用汇总隐藏单项失败。
+- 校验页的结果清单隐藏内部「投稿表单就绪」步骤；该步骤仍参与执行与完成判断，异常原因保留在总结页。
 - `busy`、`canWrite`、`comparison` 控制用户动作，`panelStatus`、`currentStep` 提供流程反馈。
 - `visible`、`panelVisible` 等描述入口和面板呈现，不改变领域目标或平台事实。
 

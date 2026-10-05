@@ -68,7 +68,7 @@ it.each([
   );
   const results = await compare(c, vi.fn());
   expect(capability).toHaveBeenCalledWith('cover', config.cover);
-  expect(results.map((r) => r.status)).toEqual(['unverified', 'unverified']);
+  expect(results.map((r) => r.status)).toEqual(['skipped', 'unverified', 'unverified']);
   expect(results.some((r) => r.status === 'blocked')).toBe(false);
   const written = await run(plan(c.prepared, c.page), c);
   expect(adapter.applyCovers).toHaveBeenCalledExactlyOnceWith(c.prepared.covers, c.signal, c.page);

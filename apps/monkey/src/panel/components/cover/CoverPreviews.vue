@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { CoverAttachment } from '../../../application/types';
 import type { CoverSource } from '../../../input/types';
+import { resultName } from '../../labels';
 import { formatSize, aspectRatio } from '../../utils/media-metadata';
 import MediaMetadata from '../ui/MediaMetadata.vue';
 
@@ -23,8 +24,7 @@ const singlePositions = computed(() =>
     ];
   })
 );
-const title = (file: CoverAttachment) =>
-  file.cover.ratio === '4:3' ? '首页推荐封面（4:3）' : '个人空间封面（16:9）';
+const title = (file: CoverAttachment) => resultName(`cover.${file.cover.ratio}`);
 function metadata(source: CoverSource, positions: { label: string; value: string }[]) {
   const { file, width, height } = source;
   return [

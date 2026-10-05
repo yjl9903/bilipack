@@ -1,10 +1,12 @@
 // Field captions in the native form; execution progress keeps its action wording.
 const labels: Record<string, string> = {
-  'video.upload': '视频',
+  'video.upload': '选择视频',
   'editor.ready': '投稿表单',
   'video.ready': '视频上传状态',
   import: '目录',
   'bilipack.toml': '配置文件',
+  'cover.16:9': '个人空间封面（16:9）',
+  'cover.4:3': '首页推荐封面（4:3）',
   'info.title': '标题',
   'info.category': '分区',
   'info.declaration': '创作声明',
@@ -31,13 +33,13 @@ const labels: Record<string, string> = {
 };
 
 export function resultName(id: string): string {
-  if (id.startsWith('cover.')) return `封面 ${id.slice(6)}`;
+  if (id.startsWith('cover.')) return labels[id] ?? `封面 ${id.slice(6)}`;
   if (id.startsWith('subtitles.')) return `字幕 ${id.slice(10)}`;
   return labels[id] ?? '配置项';
 }
 
 const names: Record<string, string> = {
-  'video.upload': '上传视频',
+  'video.upload': '选择视频',
   'editor.ready': '等待投稿编辑表单',
   'video.ready': '确认视频上传完成',
   import: '导入目录',
@@ -67,7 +69,7 @@ const names: Record<string, string> = {
   'publish.at': '填写发布时间'
 };
 export function stepName(id: string): string {
-  if (id.startsWith('cover.')) return `设置 ${id.slice(6)} 封面`;
+  if (id.startsWith('cover.')) return `设置${resultName(id)}`;
   if (id.startsWith('subtitles.')) return `上传 ${id.slice(10)} 字幕`;
   return names[id] ?? id;
 }
@@ -118,7 +120,7 @@ export const panelStatusLabels = {
   'awaiting-write': '待写入',
   'video-wait': '视频上传中',
   executing: '执行中',
-  completed: '已完成',
+  completed: '填写完成',
   attention: '待处理',
   error: '异常',
   interrupted: '已中断'

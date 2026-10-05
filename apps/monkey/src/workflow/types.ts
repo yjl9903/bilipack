@@ -37,8 +37,6 @@ export type Step = {
   retry?: 'execute';
   /** Read-only observation hands the page back and prevents later form operations. */
   allowDuringSubmission?: boolean;
-  /** Assignment can unblock dependents while a later step supplies completion evidence. */
-  pendingCompletion?: { step: string; verifiedMessage: string; unverifiedMessage: string };
   repair?(context: RunContext): Promise<void>;
   verify(context: RunContext): Promise<Evidence> | Evidence;
   expected?: unknown;

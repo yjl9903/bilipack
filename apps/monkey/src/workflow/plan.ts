@@ -7,12 +7,8 @@ export function plan(prepared: Prepared, page: PageContext): Step[] {
     {
       id: 'video.upload',
       role: page.video === 'absent' ? 'target' : 'condition',
+      expected: page.video === 'absent' ? prepared.video?.name : undefined,
       retry: 'execute',
-      pendingCompletion: {
-        step: 'video.ready',
-        verifiedMessage: '页面确认本次视频上传完成',
-        unverifiedMessage: '未确认本次视频上传完成，请检查原页面'
-      },
       capability: { field: 'video' },
       dependsOn: [],
       ...(page.video !== 'absent' ? { skip: '页面已有视频，跳过视频上传' } : {}),
@@ -20,7 +16,16 @@ export function plan(prepared: Prepared, page: PageContext): Step[] {
         if (!c.prepared.video) throw new Error('缺少视频文件');
         await c.adapter.uploadVideo(c.prepared.video, c.signal, c.page);
       },
-      verify: () => ({ matches: false, message: '文件已交给页面；等待独立完成核验' })
+      verify(c) {
+        const actual = c.adapter.context();
+        const matches =
+          actual.count === 1 && (actual.video === 'uploading' || actual.video === 'ready');
+        return {
+          matches,
+          actual: actual.video,
+          message: matches ? '视频选择成功，已进入上传流程' : '未确认视频选择成功'
+        };
+      }
     },
     {
       id: 'editor.ready',
@@ -61,7 +66,7 @@ export function plan(prepared: Prepared, page: PageContext): Step[] {
       group: coverGroup,
       capability: { field: 'cover', value: prepared.config.cover },
       dependsOn: ['editor.ready'],
-      expected: cover.file.name,
+      expected: cover.source.file.name,
       verify: (c) => c.adapter.verifyCover(cover.ratio, c.signal, c.page)
     });
   steps.push(...fieldSteps.filter((step) => step.id === 'info.tags'));

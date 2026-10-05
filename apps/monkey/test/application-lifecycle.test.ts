@@ -38,6 +38,8 @@ it('releases late preparation after disposal and cannot publish into a replaceme
   expect(updates).toHaveBeenCalledTimes(updateCount);
   expect(nextUpdates.mock.calls.at(-1)![0]).toBe(nextState);
   expect(oldAdapter.applyField).not.toHaveBeenCalled();
-  expect(nextState.results[0]).toMatchObject({ id: 'info.title', expected: '新' });
+  expect(nextState.results).toEqual(
+    expect.arrayContaining([expect.objectContaining({ id: 'info.title', expected: '新' })])
+  );
   next.dispose();
 });

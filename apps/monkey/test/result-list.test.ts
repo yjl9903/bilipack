@@ -179,11 +179,10 @@ it('renders successes once on one row and lists only problems in the summary', a
       '创作声明',
       '标题',
       '标签',
-      '封面 16:9',
+      '个人空间封面（16:9）',
       '字幕 中文',
-      '视频',
-      '视频上传状态',
-      '投稿表单'
+      '选择视频',
+      '视频上传状态'
     ]);
     expect(validation.textContent).not.toContain('页面读回一致');
     expect(validation.querySelector('.different')?.textContent).toContain('旧标签');
@@ -243,8 +242,8 @@ it('separates current values from targets with readable tags and preserved parag
 });
 
 it.each([
-  { id: 'cover.16:9', expected: 'bilipack-wide.png' },
-  { id: 'cover.4:3', expected: 'bilipack-standard.png', actual: '4:3' },
+  { id: 'cover.16:9', expected: '个人空间.jpg' },
+  { id: 'cover.4:3', expected: '首页推荐.jpg', actual: '4:3' },
   { id: 'subtitles.中文', expected: 'local.srt', actual: 'remote.srt' },
   { id: 'video.ready', expected: 'ready', actual: 'uploading' },
   { id: 'info.title', expected: '目标标题' },

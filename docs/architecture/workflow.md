@@ -71,7 +71,6 @@ type Step = {
   capability?: { field: string; value?: unknown };
   retry?: 'execute';
   allowDuringSubmission?: boolean;
-  pendingCompletion?: { step: string; verifiedMessage: string; unverifiedMessage: string };
   repair?(context: RunContext): Promise<void>;
   verify(context: RunContext): Promise<Evidence> | Evidence;
   expected?: unknown;
@@ -83,7 +82,7 @@ type Step = {
 
 `id` 在本计划内唯一，也关联后续项目结果。`dependsOn` 引用同一计划的前置步骤，不能形成循环；`capability` 要求适配器确认当前能否处理该目标；`skip` 表达规划时已知的跳过原因。类型要求 `execute` 与 `group` 二选一，由编译检查完整性；`execute` 或 `group.execute` 负责动作或等待，`verify` 只提供结果证据，`repair` 显式声明可用的收敛操作，`expected` 保留用户期望供展示。
 
-`retry=execute` 表示重试仍需重新等待或执行前置动作；`allowDuringSubmission` 声明只读上传观察，执行器进入 observe 阶段后不可再调度表单操作或修复；`pendingCompletion` 将文件交接与后续完成证据关联。这些行为由计划声明，执行器不根据字段名猜测。pendingCompletion 的未匹配证据成为 waiting，允许依赖继续，在关联完成步骤独立核验后更新交接结果；未配置该策略的未匹配证据仍为 unverified。投稿等待中被拒绝的表单操作不再阻断计划授权的独立观察，但基础身份失效仍阻断后续步骤。
+`retry=execute` 表示重试仍需重新等待或执行前置动作；`allowDuringSubmission` 声明只读上传观察，执行器进入 observe 阶段后不可再调度表单操作或修复。这些行为由计划声明，执行器不根据字段名猜测。视频交接步骤读取页面上下文，确认存在一个正在上传或已上传完成的视频后即为 verified，允许依赖继续；未确认则为 unverified。最后的完成观察独立核验上传完成，不回写第一步结果。投稿等待中被拒绝的表单操作不再阻断计划授权的独立观察，但基础身份失效仍阻断后续步骤。
 
 步骤不必与字段一一对应。等待编辑表单和确认视频完成是独立步骤；两比例封面共享声明的 StepGroup（id、execute），成员分别核验。组操作只执行一次，执行失败由组内成员共享，不能由数组位置或字段名前缀隐式决定批量行为；组缓存直接复用同一次操作的 Promise，成功和失败都由同一操作返回；部分核验失败仍分别保留结果。视频交给原生控件后，表单可用即可填写，视频上传则继续等待最终完成，不能把二者串成不必要的阻塞。
 
@@ -103,7 +102,7 @@ interface Evidence {
 
 `matches` 回答本步骤能否确认目标匹配，`actual` 提供可读回的实际值，`message` 说明观察依据或限制。证据属于发起核验的步骤及当前稿件上下文，关联由调用链建立；类型没有独立的证据编号、时间戳或保存状态。
 
-动作返回成功不是匹配证据。视频文件交给页面后仍需等待并确认上传完成；附件核验只覆盖页面可观察属性，例如字幕语言和文件名，不能推断正文一致。本地封面预览也不能替代平台读回。
+动作返回成功不是匹配证据。视频文件交给页面后，第一步须确认已正常进入上传流程；最后一步仍需等待并确认上传完成；附件核验只覆盖页面可观察属性，例如字幕语言和文件名，不能推断正文一致。本地封面预览也不能替代平台读回。
 
 每个步骤执行后立即核验，所有步骤结束后直接汇总结果，不再统一读回已核验项目。标签目标显式声明 repair；即时核验不匹配时，执行器检查页面、终止信号、提交等待及能力，再进入 repair 阶段执行一次收敛并重新核验。不把写入藏在 verify 中，也不在 compare 中调用 repair。核验只说明该步骤核验时的页面状态，后续平台异步变化由用户检查。表单操作结束并进入视频观察时，页面即交还用户；留在表单页或进入平台提交等待页使用同一 observe 阶段，只观察视频完成，保留此前证据；结果不表示最终保存或投稿成功。
 
@@ -123,7 +122,7 @@ interface Result {
 }
 ```
 
-Step 必须声明 `role`，run 原样保留到 Result。`target` 表示本轮用户目标，`condition` 表示前置条件或完成观察。空页面视频上传为 target，完成观察为 condition，通过 pendingCompletion 更新同一个上传目标；已有视频时上传跳过为 condition。字段、字幕和两个封面比例成员为 target，组本身不产生额外结果；编辑表单等待为 condition。比对结果为 target，输入校验和导入异常为 condition。汇总只消费分类，不通过 ID 推断语义。
+Step 必须声明 `role`，run 原样保留到 Result。`target` 表示本轮用户目标，`condition` 表示前置条件或完成观察。空页面视频进入上传流程为 target，完成观察为 condition，两步各自保留核验结果；已有视频时上传跳过为 condition。字段、字幕和两个封面比例成员为 target，组本身不产生额外结果；编辑表单等待为 condition。比对中的字段及附件结果为 target，首项视频上传显示 skipped、role 为 condition；输入校验和导入异常为 condition。汇总只消费分类，不通过 ID 推断语义。
 
 执行结果的 `id` 对应步骤；比对结果使用字段或附件目标身份。`expected` 来源于目标，`actual` 来源于读回，`message` 保留原因和证据边界。结果不持有独立证据对象，也不单凭 `status` 表示执行过写入：只读比对同样可能得到匹配结果，必须结合本次处于比对还是执行阶段解释。
 

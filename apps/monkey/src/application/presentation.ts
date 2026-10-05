@@ -47,8 +47,8 @@ export function presentAttachments(prepared: Prepared): Attachment[] {
     ...prepared.covers.map((c) => ({
       type: 'cover' as const,
       cover: { ratio: c.ratio, source: c.source },
-      name: c.file.name,
-      size: c.file.size,
+      name: c.source.file.name,
+      size: c.source.file.size,
       kind: `本地目标封面 ${c.ratio}（非页面结果）`,
       url: c.url
     })),

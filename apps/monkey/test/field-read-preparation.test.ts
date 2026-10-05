@@ -45,7 +45,7 @@ it('opens collapsed settings before comparing their fields without writing value
     ),
     vi.fn()
   );
-  expect(results.map((result) => result.status)).toEqual(['verified', 'verified']);
+  expect(results.map((result) => result.status)).toEqual(['skipped', 'verified', 'verified']);
   expect(fields.expand.mock.invocationCallOrder[0]).toBeLessThan(
     fields.read.mock.invocationCallOrder[0]
   );

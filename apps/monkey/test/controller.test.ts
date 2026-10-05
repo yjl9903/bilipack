@@ -66,7 +66,10 @@ it.each([false, true])(
     verifyField.mockResolvedValue({ matches: false, actual: '用户修改', message: '用户已接手' });
     expect(state.results.find((r) => r.id === 'info.title')?.status).toBe('verified');
     expect(state.results.find((r) => r.id === 'video.ready')?.status).toBe('running');
-    expect(state.results.find((r) => r.id === 'video.upload')?.status).toBe('waiting');
+    expect(state.results.find((r) => r.id === 'video.upload')).toMatchObject({
+      status: 'verified',
+      expected: 'video.mp4'
+    });
     const pendingSnapshot = state.results;
     finishUpload();
     await job;
@@ -139,6 +142,8 @@ it('retains existing results if the next picker is cancelled', async () => {
     state = s;
   });
   await controller.importDirectory();
+  expect(state.results[0]).toMatchObject({ id: 'video.upload', status: 'skipped' });
+  expect(adapter.uploadVideo).not.toHaveBeenCalled();
   const results = state.results;
   click.mockImplementation(function (this: HTMLInputElement) {
     this.dispatchEvent(new Event('cancel'));
@@ -273,6 +278,7 @@ it.each(['ready', 'uploading'] as const)(
     expect(state.panelStatus).toBe('awaiting-write');
     expect(state.comparison).toBe(true);
     expect(state.results).toMatchObject([
+      { id: 'video.upload', role: 'condition', status: 'skipped' },
       { id: 'info.title', status: 'different', expected: '目标', actual: '原有标题' },
       { id: 'info.description', status: 'verified', expected: '相同简介', actual: '相同简介' }
     ]);

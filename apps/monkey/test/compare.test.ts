@@ -15,6 +15,7 @@ it('never uses write-verification evidence to claim existing attachments match l
   );
   const results = await compare(ctx, vi.fn());
   expect(results.map((r) => [r.id, r.status])).toEqual([
+    ['video.upload', 'skipped'],
     ['cover.16:9', 'unverified'],
     ['subtitles.中文', 'unverified']
   ]);
@@ -31,8 +32,8 @@ it('keeps unreadable fields distinct from known differences', async () => {
     })
   });
   const results = await compare(context({}, adapter), vi.fn());
-  expect(results[0]).toMatchObject({ id: 'info.title', status: 'unverified', expected: '目标' });
-  expect(results[0].message).toContain('控件隐藏');
+  expect(results[1]).toMatchObject({ id: 'info.title', status: 'unverified', expected: '目标' });
+  expect(results[1].message).toContain('控件隐藏');
   expect(adapter.applyField).not.toHaveBeenCalled();
 });
 
@@ -46,7 +47,7 @@ it('keeps current tags structured instead of duplicating them in the reason', as
     context({ config: { info: { tags: ['目标标签'] } } }, adapter),
     vi.fn()
   );
-  expect(results[0]).toMatchObject({
+  expect(results[1]).toMatchObject({
     actual: ['旧标签'],
     expected: ['目标标签'],
     message: '暂无法比对：标签经补偿重试仍未稳定；标签输入被页面重置'

@@ -28,10 +28,8 @@ async function showTooltip(event: Event, text: string) {
   const popup = tooltip.value;
   if (!popup || tooltipTarget.value !== target) return;
   const bounds = target.getBoundingClientRect();
-  const width = Math.min(480, window.innerWidth - 16);
-  popup.style.width = `${width}px`;
   popup.showPopover?.();
-  const height = popup.getBoundingClientRect().height;
+  const { width, height } = popup.getBoundingClientRect();
   popup.style.left = `${Math.max(8, Math.min(bounds.right - width, window.innerWidth - width - 8))}px`;
   popup.style.top = `${Math.max(8, bounds.bottom + height > window.innerHeight - 8 ? bounds.top - height : bounds.bottom)}px`;
   window.addEventListener('resize', hideTooltip);

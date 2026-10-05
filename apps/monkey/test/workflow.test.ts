@@ -124,7 +124,7 @@ describe('workflow invariants', () => {
       message: 'readback'
     });
   });
-  it('treats a triggered upload as incomplete until actual video verification', async () => {
+  it('blocks dependent steps when a triggered upload has not entered the upload flow', async () => {
     const a = mockAdapter({
       context: () => ({
         identity: 'x',
@@ -139,7 +139,8 @@ describe('workflow invariants', () => {
     const c = context({ video: new File(['v'], 'v.mp4') }, a),
       r = await run(plan(c.prepared, c.page), c);
     expect(a.uploadVideo).toHaveBeenCalledOnce();
-    expect(a.applyField).toHaveBeenCalledOnce();
+    expect(a.applyField).not.toHaveBeenCalled();
+    expect(a.waitVideo).not.toHaveBeenCalled();
     expect(r[0].status).toBe('unverified');
     expect(summarize(r)).not.toContain('确认后自行提交或保存');
   });

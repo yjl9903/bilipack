@@ -166,7 +166,7 @@ it('shows live execution in the title, summary and validation until the run ends
   );
   await nextTick();
   expect(host.querySelector('.panel-heading .loading-spinner')).toBeNull();
-  expect(host.querySelector('.panel-status')?.textContent?.trim()).toBe('已完成');
+  expect(host.querySelector('.panel-status')?.textContent?.trim()).toBe('填写完成');
   expect(host.querySelector('.progress-message')).toBeNull();
   expect(host.querySelector('#bilipack-panel-validation .running')).toBeNull();
   expect(

@@ -10,13 +10,26 @@ export async function compare(
 ): Promise<Result[]> {
   const { adapter, prepared, signal, page } = context;
   const targets = fieldTargets(prepared.config);
-  const results: Result[] = targets.map((target) => ({
+  const fieldResults: Result[] = targets.map((target) => ({
     id: target.field,
     role: 'target',
     status: 'pending',
     expected: target.value,
     message: '等待比对'
   }));
+  const results: Result[] = [
+    ...(page.video !== 'absent'
+      ? [
+          {
+            id: 'video.upload',
+            role: 'condition' as const,
+            status: 'skipped' as const,
+            message: '页面已有视频，跳过视频上传'
+          }
+        ]
+      : []),
+    ...fieldResults
+  ];
   const assert = () => {
     signal.throwIfAborted();
     adapter.assertContext(page);
@@ -28,7 +41,7 @@ export async function compare(
     );
   for (const [index, target] of targets.entries()) {
     assert();
-    const result = results[index];
+    const result = fieldResults[index];
     result.status = 'verifying';
     result.message = '正在读取当前值';
     notify({ phase: 'compare', id: target.field });
@@ -65,7 +78,7 @@ export async function compare(
     ...prepared.covers.map((cover) => ({
       id: `cover.${cover.ratio}`,
       field: 'cover',
-      expected: cover.file.name,
+      expected: cover.source.file.name,
       value: prepared.config.cover
     })),
     ...prepared.subtitles.map((subtitle) => ({

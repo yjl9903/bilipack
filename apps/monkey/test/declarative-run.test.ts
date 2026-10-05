@@ -3,7 +3,7 @@ import { run } from '../src/workflow/run';
 import type { Step } from '../src/workflow/types';
 import { context, mockAdapter } from './helpers';
 
-it('uses declared waiting, completion association and retry policies with arbitrary IDs', async () => {
+it('uses declared observation and retry policies with arbitrary IDs', async () => {
   const assign = vi.fn(async () => {}),
     editor = vi.fn(async () => {}),
     field = vi.fn(async () => {}),
@@ -14,13 +14,8 @@ it('uses declared waiting, completion association and retry policies with arbitr
       role: 'target' as const,
       dependsOn: [],
       retry: 'execute',
-      pendingCompletion: {
-        step: 'observe-source',
-        verifiedMessage: 'source ready',
-        unverifiedMessage: 'source not ready'
-      },
       execute: assign,
-      verify: () => ({ matches: false, message: 'assigned' })
+      verify: () => ({ matches: true, message: 'assigned' })
     },
     {
       id: 'usable-form',
@@ -49,7 +44,7 @@ it('uses declared waiting, completion association and retry policies with arbitr
   ];
   const c = context();
   const first = await run(steps, c);
-  expect(first[0]).toMatchObject({ role: 'target', status: 'verified', message: 'source ready' });
+  expect(first[0]).toMatchObject({ role: 'target', status: 'verified', message: 'assigned' });
   expect(first.map((r) => r.role)).toEqual(steps.map((s) => s.role));
   await run(steps, c, undefined, first);
   expect(assign).toHaveBeenCalledTimes(2);
@@ -58,20 +53,15 @@ it('uses declared waiting, completion association and retry policies with arbitr
   expect(field).toHaveBeenCalledOnce();
 });
 
-it('reports unresolved assignment from its declared completion step', async () => {
+it('preserves successful assignment when completion remains unverified', async () => {
   const results = await run(
     [
       {
         id: 'assignment',
         role: 'target' as const,
         dependsOn: [],
-        pendingCompletion: {
-          step: 'confirmation',
-          verifiedMessage: 'ready',
-          unverifiedMessage: 'unknown'
-        },
         execute: async () => {},
-        verify: () => ({ matches: false, message: 'wait' })
+        verify: () => ({ matches: true, message: 'assigned' })
       },
       {
         id: 'confirmation',
@@ -83,7 +73,8 @@ it('reports unresolved assignment from its declared completion step', async () =
     ],
     context()
   );
-  expect(results[0]).toMatchObject({ status: 'unverified', message: 'unknown' });
+  expect(results[0]).toMatchObject({ status: 'verified', message: 'assigned' });
+  expect(results[1]).toMatchObject({ status: 'unverified', message: 'not ready' });
 });
 
 it('continues declared observation after an in-flight form operation fails in submission waiting', async () => {

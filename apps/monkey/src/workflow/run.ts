@@ -118,12 +118,7 @@ export async function run(
     if (
       step.dependsOn.some((id) => {
         const result = results.find((r) => r.id === id);
-        // The plan may release dependents after assignment, before final completion evidence.
-        return (
-          !result ||
-          (!['verified', 'skipped'].includes(result.status) &&
-            !(steps.find((s) => s.id === id)?.pendingCompletion && result.status === 'waiting'))
-        );
+        return !result || !['verified', 'skipped'].includes(result.status);
       })
     ) {
       emit({ status: 'blocked', message: '前置条件未完成' });
@@ -152,7 +147,7 @@ export async function run(
       if (submissionWaiting() && !step.allowDuringSubmission)
         throw new Error('读回期间进入投稿等待，本项尚未确认');
       emit({
-        status: evidence.matches ? 'verified' : step.pendingCompletion ? 'waiting' : 'unverified',
+        status: evidence.matches ? 'verified' : 'unverified',
         expected: step.expected,
         actual: evidence.actual,
         message: evidence.message
@@ -172,17 +167,6 @@ export async function run(
         interrupted = true;
       }
     }
-  }
-  for (const step of steps) {
-    if (!step.pendingCompletion) continue;
-    const assigned = results.find((r) => r.id === step.id);
-    if (assigned?.status !== 'waiting') continue;
-    const completion = step.pendingCompletion;
-    const verified = results.find((r) => r.id === completion.step)?.status === 'verified';
-    update(step.id, {
-      status: verified ? 'verified' : 'unverified',
-      message: verified ? completion.verifiedMessage : completion.unverifiedMessage
-    });
   }
   currentStep = undefined;
   notify();
