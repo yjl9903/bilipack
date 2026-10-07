@@ -423,9 +423,11 @@ button.collapse-button {
 
 .video-preview {
   display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
+  width: auto;
+  height: auto;
+  max-width: 100%;
   max-height: 320px;
+  margin-inline: 0;
   object-fit: contain;
   background: #000;
   border-radius: 8px;
