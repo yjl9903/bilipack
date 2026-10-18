@@ -52,5 +52,9 @@ export default defineConfig({
     !process.env.VITEST && nativeShikiImport(),
     !process.env.VITEST && checkArtifact(pkg.version, externalRequires)
   ],
-  test: { environment: 'jsdom', include: ['test/**/*.test.ts'] }
+  test: {
+    environment: 'jsdom',
+    include: ['test/**/*.test.ts'],
+    setupFiles: ['./test/setup.ts']
+  }
 });
