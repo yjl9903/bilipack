@@ -3,6 +3,27 @@ import { expect, it, vi } from 'vitest';
 import { compare } from '../src/workflow/compare';
 import { context, mockAdapter, cover } from './helpers';
 
+it('retains incomplete-detail evidence even when the visible switch equals the target', async () => {
+  const adapter = mockAdapter({
+    verifyField: vi.fn(async () => ({
+      matches: false,
+      actual: true,
+      message: '合作详情仍需手动补充'
+    }))
+  });
+  const results = await compare(
+    context({ config: { commercial: { enabled: true } } }, adapter),
+    vi.fn()
+  );
+  expect(results[1]).toMatchObject({
+    status: 'unverified',
+    actual: true,
+    expected: true,
+    message: '合作详情仍需手动补充；尚未执行写入'
+  });
+  expect(adapter.applyField).not.toHaveBeenCalled();
+});
+
 it('never uses write-verification evidence to claim existing attachments match local files', async () => {
   const adapter = mockAdapter({ verifyCover: vi.fn(), verifySubtitle: vi.fn() });
   const ctx = context(

@@ -4,7 +4,7 @@
 
 | 资料 | 来源与适用范围 |
 | --- | --- |
-| [B 站投稿页面能力核查](bilibili-upload.md) | 2026-10-04～05，Edge + Tampermonkey 开发脚本的真实页面观察；受账号、路由和页面版本限制 |
+| [B 站投稿页面能力核查](bilibili-upload.md) | 2026-10-04～05、19，Edge / Chrome + Tampermonkey 开发脚本的真实页面观察；受账号、路由和页面版本限制 |
 
 ## 记录要求
 

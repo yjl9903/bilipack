@@ -23,6 +23,8 @@ export type Config = z.infer<typeof configSchema>;
 
 可选字段不是默认填写整张表单：缺省表示保持现状，显式 `false`、空字符串和空列表仍表达关闭或清空的意图。封面的联合类型区分单原图加构图位置与独立双文件；字幕用语言关联素材路径。
 
+配置非空 `publish.collection` 时，schema 为省略的 `collection_update_push` 补充 true，显式 false 保留；未配置合集不产生该默认值，推送字段与缺少或清空合集的组合在输入阶段拒绝。
+
 这里得到的是有效配置，还不是可用附件，更不代表平台已支持所有字段。
 
 ## 3. 解析附件，完成流程所需的预检

@@ -3,6 +3,7 @@ import { createBilibiliAdapter } from '../src/bilibili/adapter';
 import { compare } from '../src/workflow/compare';
 import { context } from './helpers';
 import type { PageContext } from '../src/workflow/port';
+import { subtitleLanguage } from '../src/bilibili/subtitles';
 
 const fields = vi.hoisted(() => ({
   read: vi.fn(),
@@ -16,6 +17,74 @@ vi.mock('../src/bilibili/fields', async (original) => ({
 }));
 
 beforeEach(() => vi.clearAllMocks());
+
+function capabilityAdapter(editing = false) {
+  const page: PageContext = {
+    target: true,
+    editor: true,
+    video: 'ready',
+    count: 1,
+    generation: 1,
+    identity: `https://member.bilibili.com/platform/upload/video/frame${editing ? '?type=edit' : ''}`
+  };
+  return createBilibiliAdapter(
+    document,
+    Object.assign(() => page, {
+      expectUpload: vi.fn(),
+      cancelExpectedUpload: vi.fn()
+    })
+  );
+}
+
+it('exposes verified fields while preserving edit-page restrictions', () => {
+  const adapter = capabilityAdapter();
+  for (const field of [
+    'info.topic',
+    'publish.at',
+    'publish.collection',
+    'publish.collection_update_push',
+    'media.dolby_audio',
+    'media.hires_audio',
+    'commercial.enabled'
+  ])
+    expect(adapter.capability(field, true).available).toBe(true);
+  for (const language of ['中文', '英语', '日语'])
+    expect(adapter.capability('subtitles', language).available).toBe(true);
+  expect(subtitleLanguage('英语')).toBe('English');
+  expect(subtitleLanguage('日语')).toBe('日本語');
+  expect(adapter.capability('subtitles', '未核查语言').available).toBe(false);
+  const editing = capabilityAdapter(true);
+  for (const field of [
+    'publish.at',
+    'publish.scheduled',
+    'subtitles',
+    'interaction.comments',
+    'interaction.danmaku',
+    'interaction.selected_comments'
+  ])
+    expect(editing.capability(field, '中文').available).toBe(false);
+});
+
+it('reports enabled commercial details as unfinished but verifies explicit disabling', async () => {
+  const adapter = capabilityAdapter();
+  const signal = new AbortController().signal;
+  fields.read.mockReturnValue(true);
+  expect(
+    await adapter.verifyField(
+      { field: 'commercial.enabled', value: true },
+      signal,
+      adapter.context()
+    )
+  ).toMatchObject({ matches: false, actual: true, message: expect.stringContaining('手动补充') });
+  fields.read.mockReturnValue(false);
+  expect(
+    await adapter.verifyField(
+      { field: 'commercial.enabled', value: false },
+      signal,
+      adapter.context()
+    )
+  ).toMatchObject({ matches: true, actual: false });
+});
 
 it('opens collapsed settings before comparing their fields without writing values', async () => {
   let expanded = false;

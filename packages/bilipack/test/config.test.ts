@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseConfig, ValidationError, type Diagnostic } from '../src';
+import { parseConfig, fieldTargets, ValidationError, type Diagnostic } from '../src';
 
 function diagnostics(source: string): Diagnostic[] {
   try {
@@ -12,6 +12,48 @@ function diagnostics(source: string): Diagnostic[] {
 }
 
 describe('configuration schema contracts', () => {
+  it('defaults collection update push only when a nonempty collection is configured', () => {
+    const config = parseConfig('[publish]\ncollection="合集"');
+    expect(config.publish).toEqual({ collection: '合集', collection_update_push: true });
+    expect(fieldTargets(config)).toEqual([
+      { field: 'publish.collection', value: '合集' },
+      { field: 'publish.collection_update_push', value: true }
+    ]);
+    for (const source of ['', '[publish]', '[publish]\ncollection=""'])
+      expect(
+        fieldTargets(parseConfig(source)).some(
+          (target) => target.field === 'publish.collection_update_push'
+        )
+      ).toBe(false);
+  });
+
+  it.each([true, false])(
+    'preserves explicit collection update push %s and requires a collection',
+    (value) => {
+      expect(
+        parseConfig(`[publish]\ncollection_update_push=${value}\ncollection="合集"`).publish
+      ).toEqual({ collection: '合集', collection_update_push: value });
+      for (const collection of ['', '\ncollection=""', '\ncollection="  "'])
+        expect(
+          diagnostics(`[publish]\ncollection_update_push=${value}${collection}`)
+        ).toContainEqual({
+          field: 'publish.collection_update_push',
+          code: 'config',
+          message: '配置合集更新推送必须指定非空合集'
+        });
+    }
+  );
+
+  it.each([
+    ['info', 'no_reprint'],
+    ['media', 'panorama']
+  ])('rejects removed field %s.%s', (section, field) => {
+    expect(diagnostics(`[${section}]\n${field}=false`)).toContainEqual({
+      field: `${section}.${field}`,
+      code: 'unknown',
+      message: '未知字段'
+    });
+  });
   it('normalizes every attachment path and preserves dual cover shape', () => {
     expect(
       parseConfig(`
@@ -40,7 +82,6 @@ title = ""
 description = ""
 category = ""
 topic = ""
-no_reprint = false
 tags = []
 [publish]
 scheduled = false
@@ -53,7 +94,6 @@ enabled = false
 [media]
 dolby_audio = false
 hires_audio = false
-panorama = false
 [interaction]
 dynamic = ""
 comments = false
@@ -62,11 +102,11 @@ selected_comments = false
 `);
     expect(config).toEqual({
       subtitles: [],
-      info: { title: '', description: '', category: '', topic: '', no_reprint: false, tags: [] },
+      info: { title: '', description: '', category: '', topic: '', tags: [] },
       publish: { scheduled: false, collection: '' },
       display: { watermark: false, hide_from_profile: false },
       commercial: { enabled: false },
-      media: { dolby_audio: false, hires_audio: false, panorama: false },
+      media: { dolby_audio: false, hires_audio: false },
       interaction: { dynamic: '', comments: false, danmaku: false, selected_comments: false }
     });
     expect(parseConfig('')).toEqual({});
@@ -164,6 +204,11 @@ extra = false
     ['[info]\ndeclaration="不支持"', 'info.declaration', '不支持的创作声明'],
     ['[display]\nvisibility="everyone"', 'display.visibility', '不支持的可见范围'],
     ['[display]\nwatermark="false"', 'display.watermark', '必须是 boolean'],
+    [
+      '[publish]\ncollection="合集"\ncollection_update_push="false"',
+      'publish.collection_update_push',
+      '必须是 boolean'
+    ],
     ['[info]\ntitle=123', 'info.title', '必须是 string'],
     ['[video]\nfile=123', 'video.file', '必须是文件相对路径'],
     ['[publish]\nscheduled=true', 'publish.at', '开启定时发布必须提供时间'],

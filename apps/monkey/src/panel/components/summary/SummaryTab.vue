@@ -81,7 +81,7 @@ const writeReasonId = useId();
       <button
         class="primary write-configuration"
         :disabled="state.busy || !state.canWrite"
-        @click="$emit('write')"
+        @click.stop="$emit('write')"
       >
         写入配置
       </button>

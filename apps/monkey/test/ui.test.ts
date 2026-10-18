@@ -3,9 +3,45 @@ import { createApp, nextTick, reactive } from 'vue';
 import SelectedDirectoryCard from '../src/panel/SelectedDirectoryCard.vue';
 import type { ViewState } from '../src/application/types';
 import CodePreview from '../src/panel/components/ui/CodePreview.vue';
+import SummaryTab from '../src/panel/components/summary/SummaryTab.vue';
 vi.mock('../src/panel/utils/shiki-cdn', () => ({
   loadHighlighter: vi.fn().mockRejectedValue(new Error('CDN unavailable'))
 }));
+
+it('does not bubble the write click to page handlers that close newly opened pickers', () => {
+  const state: ViewState = {
+    directoryName: 'test',
+    visible: true,
+    busy: false,
+    raw: '',
+    summary: '',
+    results: [],
+    attachments: [],
+    canWrite: true
+  };
+  const host = document.createElement('div');
+  document.body.append(host);
+  let pickerOpen = false;
+  const outsideClick = () => {
+    pickerOpen = false;
+  };
+  document.addEventListener('click', outsideClick);
+  const app = createApp(SummaryTab, {
+    state,
+    onWrite: () => {
+      pickerOpen = true;
+    }
+  });
+  try {
+    app.mount(host);
+    host.querySelector<HTMLButtonElement>('.write-configuration')!.click();
+    expect(pickerOpen).toBe(true);
+  } finally {
+    app.unmount();
+    host.remove();
+    document.removeEventListener('click', outsideClick);
+  }
+});
 it('renders exact raw TOML including comments and hostile markup as readonly text', () => {
   const source = '# 原始注释\r\n[info]\r\ntitle = "<img src=x onerror=alert(1)>"\r\n\r\n';
   const host = document.createElement('div');

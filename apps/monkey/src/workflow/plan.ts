@@ -44,8 +44,38 @@ export function plan(prepared: Prepared, page: PageContext): Step[] {
     dependsOn:
       target.field === 'publish.at' && prepared.config.publish?.scheduled !== undefined
         ? ['editor.ready', 'publish.scheduled']
-        : ['editor.ready'],
-    execute: (c) => c.adapter.applyField(target, c.signal, c.page),
+        : target.field === 'publish.collection_update_push'
+          ? ['editor.ready', 'publish.collection']
+          : ['editor.ready'],
+    async execute(c) {
+      const tags = c.prepared.config.info?.tags;
+      if (
+        target.field === 'info.topic' &&
+        target.value &&
+        tags !== undefined &&
+        c.adapter.readField('info.topic') !== target.value
+      ) {
+        const actual = c.adapter.readField('info.tags');
+        if (!Array.isArray(actual) || !actual.every((tag) => typeof tag === 'string'))
+          throw new Error('无法读取普通标签，未调整话题');
+        // Only remove explicitly unwanted tags here; additions wait until after the topic.
+        const retained = actual.filter((tag) => tags.includes(tag));
+        if (retained.length !== actual.length) {
+          const cleanup = { field: 'info.tags', value: retained } as const;
+          const capability = c.adapter.capability(cleanup.field, cleanup.value);
+          if (!capability.available) throw new Error(capability.reason ?? '无法清理普通标签');
+          await c.adapter.applyField(cleanup, c.signal, c.page);
+          c.signal.throwIfAborted();
+          c.adapter.assertContext(c.page);
+          const evidence = await c.adapter.verifyField(cleanup, c.signal, c.page);
+          c.signal.throwIfAborted();
+          c.adapter.assertContext(c.page);
+          if (!evidence.matches)
+            throw new Error(`普通标签清理尚未确认，未调整话题：${evidence.message}`);
+        }
+      }
+      await c.adapter.applyField(target, c.signal, c.page);
+    },
     verify: (c) => c.adapter.verifyField(target, c.signal, c.page),
     ...(target.field === 'info.tags'
       ? {

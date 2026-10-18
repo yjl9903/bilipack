@@ -1,7 +1,16 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { reconcileTags, type TagControls } from '../src/bilibili/tags';
+import { reconcileTags, validateTagCapacity, type TagControls } from '../src/bilibili/tags';
 
 afterEach(() => vi.restoreAllMocks());
+
+it('reserves a native tag slot for the topic without treating it as an ordinary tag', () => {
+  const nine = Array.from({ length: 9 }, (_, i) => `标签${i}`);
+  expect(() => validateTagCapacity(nine, ['话题'])).not.toThrow();
+  expect(() => validateTagCapacity([...nine, '第十项'], ['话题'])).toThrow('10 个名额');
+  expect(() => validateTagCapacity([...nine, '第十项'], [])).not.toThrow();
+  expect(() => validateTagCapacity(['话题'], ['话题'])).toThrow('同名');
+  expect(() => validateTagCapacity([], ['话题'])).not.toThrow();
+});
 
 function setup(initial: string[]) {
   let now = 0;

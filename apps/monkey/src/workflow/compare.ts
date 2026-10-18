@@ -57,11 +57,15 @@ export async function compare(
         const evidence = await adapter.verifyField(target, signal, page);
         assert();
         Object.assign(result, {
-          status: evidence.matches ? 'verified' : 'different',
+          status: evidence.matches
+            ? 'verified'
+            : evidence.actual === target.value
+              ? 'unverified'
+              : 'different',
           actual: evidence.actual,
           message: evidence.matches
             ? '当前值与配置一致，尚未执行写入'
-            : '当前值与配置不同，尚未执行写入'
+            : `${evidence.message}；尚未执行写入`
         });
       } catch (error) {
         assert();

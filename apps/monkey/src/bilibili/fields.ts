@@ -1,12 +1,21 @@
 import type { FieldTarget } from 'bilipack';
 import { one, visible } from './controls';
 import { waitFor, writeText, click, type Operation } from './operation';
-import { reconcileTags } from './tags';
+import { reconcileTags, validateTagCapacity } from './tags';
+import { createSchedule, scheduleParts } from './schedule';
 
 // Native-control protocol adapted from the user's .rajio/scripts/bilibili/fill.js.
 // No access to site component instances or stores; no submission controls.
 export const normalizeText = (text: string) => text.replace(/\r/g, '').replace(/\n$/, '');
 export function matches(field: string, actual: unknown, expected: unknown) {
+  if (field === 'publish.at' && typeof actual === 'string' && typeof expected === 'string') {
+    try {
+      scheduleParts(expected);
+      return Number.isFinite(Date.parse(actual)) && Date.parse(actual) === Date.parse(expected);
+    } catch {
+      return false;
+    }
+  }
   if (field === 'info.tags' && Array.isArray(actual) && Array.isArray(expected))
     return (
       actual.length === expected.length &&
@@ -29,6 +38,7 @@ const textSelectors: Record<string, string> = {
   'interaction.dynamic': '[editor_id="dynamic_at_editor"] .ql-editor'
 };
 const checks: Record<string, [string, boolean]> = {
+  'publish.collection_update_push': ['此稿件不生成更新推送', true],
   'commercial.enabled': ['增加商业推广信息', false],
   'interaction.comments': ['关闭评论', true],
   'interaction.danmaku': ['关闭弹幕', true],
@@ -45,6 +55,7 @@ function canContinue(operation: Operation) {
   }
 }
 export function createFields(doc: Document) {
+  const schedule = createSchedule(doc);
   const root = () => one(Array.from(doc.querySelectorAll('#video-up-app')), '投稿表单');
   const all = <T extends Element = HTMLElement>(selector: string, scope: ParentNode = root()) =>
     Array.from(scope.querySelectorAll<T>(selector)).filter(visible);
@@ -55,13 +66,26 @@ export function createFields(doc: Document) {
       all(selector, scope).filter((e) => e.textContent?.trim() === text),
       text
     );
+  const tagItems = () => all('#tag-container .tag-pre-wrp .label-item-v2-container');
+  const ordinaryItems = () => tagItems().filter((e) => !e.querySelector('.topic-icon'));
   const tags = () =>
-    all('#tag-container .tag-pre-wrp .label-item-v2-content').map((e) => e.textContent!.trim());
+    ordinaryItems().map((e) => get('.label-item-v2-content', e).textContent!.trim());
+  const topic = () => {
+    get('#tag-container');
+    const items = tagItems().filter((e) => e.querySelector('.topic-icon'));
+    return items.length
+      ? get('.label-item-v2-content', one(items, '已选话题')).textContent!.trim()
+      : '';
+  };
   const checkbox = (field: string) =>
     field === 'display.watermark'
       ? get('.watermark .bcc-checkbox')
       : one(
-          all('.bcc-checkbox').filter((e) =>
+          all(
+            field === 'publish.collection_update_push'
+              ? '.video-season .bcc-checkbox'
+              : '.bcc-checkbox'
+          ).filter((e) =>
             e.querySelector('.bcc-checkbox-label')?.textContent?.trim().startsWith(checks[field][0])
           ),
           field
@@ -82,6 +106,14 @@ export function createFields(doc: Document) {
   };
   function read(field: string): unknown {
     if (field === 'info.tags') return tags();
+    if (field === 'info.topic') return topic();
+    if (field === 'publish.at') return schedule.read();
+    if (field === 'publish.collection') {
+      const control = get('.video-season .season-enter-text');
+      return control.querySelector('.season-enter-text-default')
+        ? ''
+        : get('.season-enter-text-name', control).textContent!.trim();
+    }
     if (field === 'info.category') return get(textSelectors[field]).textContent!.trim();
     if (field === 'info.description' || field === 'interaction.dynamic') {
       const el = get(textSelectors[field]);
@@ -118,6 +150,9 @@ export function createFields(doc: Document) {
     !!checks[field] ||
     [
       'info.tags',
+      'info.topic',
+      'publish.at',
+      'publish.collection',
       'publish.scheduled',
       'display.watermark',
       'display.visibility',
@@ -179,7 +214,65 @@ export function createFields(doc: Document) {
       } finally {
         if (canContinue(operation) && all(options).length) click(get(trigger), operation);
       }
+    } else if (field === 'publish.at') {
+      await schedule.apply(value, operation);
+    } else if (field === 'publish.collection') {
+      if (!value) click(get('.video-season .clear'), operation);
+      else {
+        if (all('.video-season .season-list').length)
+          throw new Error('已有合集菜单打开，请先关闭后重试');
+        click(get('.video-season .season-enter'), operation);
+        try {
+          await waitFor(() => all('.video-season .season-list').length || undefined, operation);
+          click(exact('.video-season .season-item-title', value), operation);
+          await waitFor(() => read(field) === value || undefined, operation);
+        } finally {
+          if (canContinue(operation) && all('.video-season .season-list').length)
+            click(get('.video-season .season-enter'), operation);
+        }
+      }
+    } else if (field === 'info.topic') {
+      if (all('.topic-dialog .bcc-dialog').length) throw new Error('已有话题弹窗，请先关闭后重试');
+      const originalTags = tags();
+      validateTagCapacity(originalTags, value ? [value] : []);
+      const selected = tagItems().filter((e) => e.querySelector('.topic-icon'));
+      if (selected.length) {
+        click(get('.close', one(selected, '已选话题')), operation);
+        await waitFor(() => topic() === '' || undefined, operation);
+      }
+      if (value) {
+        click(get('#video-up-app .tag-more'), operation);
+        try {
+          await waitFor(() => all('.topic-dialog .bcc-dialog').length || undefined, operation);
+          const dialog = () => get('.topic-dialog .bcc-dialog');
+          const search = get('input.bcc-search-input', dialog()) as HTMLInputElement;
+          writeText(search, value, operation);
+          operation.write(() =>
+            search.dispatchEvent(
+              new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true })
+            )
+          );
+          await waitFor(
+            () =>
+              all('.topic-tag-name', dialog()).some((e) => e.textContent?.trim() === value) ||
+              undefined,
+            operation,
+            15_000
+          );
+          click(exact('.topic-tag-name', value, dialog()), operation);
+          click(get('button.submit-add', dialog()), operation);
+          await waitFor(() => !all('.topic-dialog .bcc-dialog').length || undefined, operation);
+          await waitFor(() => topic() === value || undefined, operation);
+        } finally {
+          if (canContinue(operation) && all('.topic-dialog .bcc-dialog').length)
+            click(get('.topic-dialog .bcc-dialog button.submit-cancel'), operation);
+        }
+      }
+      // Topic selection owns its special tag only; preserve all ordinary tags.
+      if (!matches('info.tags', tags(), originalTags))
+        await apply({ field: 'info.tags', value: originalTags }, operation);
     } else if (field === 'info.tags') {
+      validateTagCapacity(value, topic() ? [topic()] : []);
       const pause = async (ms: number) => {
         const end = Date.now() + ms;
         await waitFor(() => (Date.now() >= end ? true : undefined), operation, ms + 1000);
@@ -199,12 +292,12 @@ export function createFields(doc: Document) {
           read: tags,
           pause,
           async remove(index, tag) {
-            const items = all('#tag-container .tag-pre-wrp .label-item-v2-content');
+            const items = ordinaryItems();
             const item = items[index];
             // Vue can replace rows between reads. Reconcile again if it has changed.
-            if (!item || item.textContent!.trim() !== tag) return;
+            if (!item || get('.label-item-v2-content', item).textContent!.trim() !== tag) return;
             const before = tags().filter((t) => t === tag).length;
-            click(get('.close', item.closest('.label-item-v2-container')!), operation);
+            click(get('.close', item), operation);
             await waitFor(
               () => (tags().filter((t) => t === tag).length < before ? true : undefined),
               operation,
@@ -212,7 +305,7 @@ export function createFields(doc: Document) {
             );
           },
           async add(tag) {
-            if (tags().length >= 10) throw new Error('标签数量已满，等待清理');
+            if (tagItems().length >= 10) throw new Error('标签数量已满（含话题），等待清理');
             try {
               let el: HTMLInputElement | undefined;
               for (let refresh = 0; refresh < 3; refresh++) {

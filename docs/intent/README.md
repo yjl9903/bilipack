@@ -117,10 +117,10 @@ Bilipack 不绑定特定节目、目录生成工具或内容制作流程。节�
 | `[video]` | 视频文件 |
 | `[cover]` | 封面文件、模式及裁剪位置 |
 | `[info]` | 标题、声明、分区、标签、话题及简介 |
-| `[publish]` | 定时发布及所属合集 |
+| `[publish]` | 定时发布、所属合集及合集更新推送 |
 | `[display]` | 水印、可见范围及个人空间展示 |
 | `[commercial]` | 商业推广信息 |
-| `[media]` | 音效、音质及全景视频 |
+| `[media]` | 音效及音质 |
 | `[interaction]` | 粉丝动态及评论、弹幕设置 |
 | `[[subtitles]]` | 字幕列表，每项指定一份文件及其语言 |
 
@@ -175,7 +175,6 @@ Bilipack 不绑定特定节目、目录生成工具或内容制作流程。节�
 | --- | --- | --- | --- |
 | 投稿信息 | 标题 | `info.title` | 稿件标题 |
 | 投稿信息 | 创作声明 | `info.declaration` | 视频的内容性质声明，选项见下文 |
-| 投稿信息 | 内容授权声明 | `info.no_reprint` | 是否声明“内容为自制：未经作者允许，禁止转载” |
 | 投稿信息 | 分区 | `info.category` | 稿件所属分区 |
 | 投稿信息 | 标签 | `info.tags` | 稿件的标签列表 |
 | 投稿信息 | 参与话题 | `info.topic` | 希望参与的平台话题或活动 |
@@ -183,13 +182,13 @@ Bilipack 不绑定特定节目、目录生成工具或内容制作流程。节�
 | 发布与归档 | 定时发布开关 | `publish.scheduled` | 是否定时发布 |
 | 发布与归档 | 定时发布时间 | `publish.at` | 期望的发布时间，包含时区 |
 | 发布与归档 | 加入已有合集 | `publish.collection` | 希望加入的已有合集 |
+| 发布与归档 | 合集更新推送 | `publish.collection_update_push` | 是否生成合集更新推送；仅可与非空合集一起配置，默认 `true` |
 | 展示设置 | 添加水印 | `display.watermark` | 是否添加水印 |
 | 展示设置 | 可见范围 | `display.visibility` | `"公开可见"` 或 `"仅自己可见"` |
 | 展示设置 | 在个人空间的投稿列表中隐藏 | `display.hide_from_profile` | 是否在个人空间隐藏稿件，与可见范围独立 |
 | 商业信息 | 增加商业推广信息 | `commercial.enabled` | 是否开启页面中的商业推广信息选项 |
 | 音视频设置 | 杜比音效 | `media.dolby_audio` | 是否开启杜比音效 |
 | 音视频设置 | Hi-Res 无损音质 | `media.hires_audio` | 是否开启 Hi-Res 无损音质 |
-| 音视频设置 | 全景视频 | `media.panorama` | 是否启用全景视频 |
 | 互动设置 | 粉丝动态 | `interaction.dynamic` | 投稿动态文案，支持多行文本 |
 | 互动设置 | 评论 | `interaction.comments` | 是否允许评论 |
 | 互动设置 | 弹幕 | `interaction.danmaku` | 是否允许弹幕 |
@@ -197,9 +196,11 @@ Bilipack 不绑定特定节目、目录生成工具或内容制作流程。节�
 | 视频元素 | 个性化卡片 | 无 | 不纳入首版 |
 | 视频元素 | 章节管理 | 无 | 不纳入首版 |
 
-创作声明可选择：`"内容无需标注"`、`"含AI生成内容"`、`"含虚构演绎内容"`、`"内容含营销信息"`、`"个人观点，仅供参考"`、`"内容为转载"`。创作声明与内容授权声明分别配置，标签与参与话题分别配置。
+创作声明可选择：`"内容无需标注"`、`"含AI生成内容"`、`"含虚构演绎内容"`、`"内容含营销信息"`、`"个人观点，仅供参考"`、`"内容为转载"`。标签与参与话题分别配置。
 
 开启定时发布时，用户提供期望时间；Bilipack 完成设置后仍由用户检查并提交。
+
+配置非空 `publish.collection` 时，`collection_update_push` 省略默认为 `true`，表示生成更新推送；`false` 表示勾选页面的“此稿件不生成更新推送”。未配置合集时不生成推送默认值；单独配置推送字段或同时清空合集视为配置冲突。合集选择成功后才能设置推送开关。
 
 ### 4.6 字幕
 
@@ -250,7 +251,6 @@ description = """
 category = "动画"
 tags = ["动画", "创作分享"]
 declaration = "内容无需标注"
-no_reprint = true              # 仅适用于确实为自制且希望禁止转载的内容
 # topic = "页面上的话题完整名称"
 
 [publish]
@@ -268,7 +268,6 @@ enabled = false
 [media]
 dolby_audio = false
 hires_audio = false
-panorama = false
 
 [interaction]
 dynamic = "这次分享我的创作过程。"
@@ -299,6 +298,7 @@ standard_file = "covers/4x3.jpg"
 scheduled = true
 at = 2026-10-05T18:00:00+08:00
 collection = "我的已有合集名称"
+collection_update_push = false # 不生成合集更新推送；省略默认为 true
 ```
 
 #### 已有视频：只修改简介和字幕

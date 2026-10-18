@@ -18,7 +18,8 @@ vi.mock('../src/bilibili/cover', () => ({
     applyCovers: (files: unknown, operation: Operation) => controls.apply(files, operation)
   })
 }));
-vi.mock('../src/bilibili/subtitles', () => ({
+vi.mock('../src/bilibili/subtitles', async (original) => ({
+  ...(await original<typeof import('../src/bilibili/subtitles')>()),
   createSubtitles: () => ({
     applySubtitle: (language: string, file: File, operation: Operation) =>
       controls.apply(file, operation)

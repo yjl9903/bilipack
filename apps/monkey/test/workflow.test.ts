@@ -161,6 +161,53 @@ it('does not write a schedule time after its enabling switch fails', async () =>
   expect(results.find((r) => r.id === 'publish.at')?.status).toBe('blocked');
 });
 
+it.each([true, false])(
+  'sets collection update push %s only after selecting and verifying the collection',
+  async (value) => {
+    const a = mockAdapter();
+    const c = context(
+      { config: { publish: { collection_update_push: value, collection: '合集' } } },
+      a
+    );
+    const results = await run(plan(c.prepared, c.page), c);
+    expect(vi.mocked(a.applyField).mock.calls.map(([target]) => target)).toEqual([
+      { field: 'publish.collection', value: '合集' },
+      { field: 'publish.collection_update_push', value }
+    ]);
+    expect(results.find((r) => r.id === 'publish.collection_update_push')?.status).toBe('verified');
+  }
+);
+
+it.each(['write', 'verify', 'unsupported'])(
+  'blocks collection update push when collection %s fails',
+  async (failure) => {
+    const a = mockAdapter({
+      applyField: vi.fn(async () => {
+        if (failure === 'write') throw new Error('无法选择合集');
+      }),
+      verifyField: vi.fn(async () => ({ matches: failure !== 'verify', message: '合集读回' })),
+      capability: (field) => ({
+        available: !(failure === 'unsupported' && field === 'publish.collection')
+      })
+    });
+    const c = context(
+      { config: { publish: { collection: '合集', collection_update_push: false } } },
+      a
+    );
+    const results = await run(plan(c.prepared, c.page), c);
+    expect(
+      vi
+        .mocked(a.applyField)
+        .mock.calls.some(([target]) => target.field === 'publish.collection_update_push')
+    ).toBe(false);
+    expect(results.find((r) => r.id === 'publish.collection_update_push')).toMatchObject(
+      failure === 'unsupported'
+        ? { status: 'skipped', skipReason: 'dependency' }
+        : { status: 'blocked' }
+    );
+  }
+);
+
 it('reports pending, executing, readback, failures and blocked dependencies as they happen', async () => {
   const snapshots: { statuses: string[]; current?: string }[] = [];
   const c = context();

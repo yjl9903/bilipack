@@ -23,7 +23,13 @@ export function fieldTargets(config: Config): FieldTarget[] {
       result.push({ field: `${group}.${key}`, value } as FieldTarget);
 
   // Controls which may reveal or reset other fields go first.
-  const order = ['info.category', 'info.declaration', 'publish.scheduled', 'publish.at'];
+  const order = [
+    'info.category',
+    'info.declaration',
+    'publish.scheduled',
+    'publish.at',
+    'publish.collection'
+  ];
 
   return result.sort(
     (a, b) =>

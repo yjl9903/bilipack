@@ -133,7 +133,7 @@ export const configSchema = section({
     title: string.optional(),
     /** 稿件简介，支持多行文字；空字符串表示清空。 */
     description: string.optional(),
-    /** 视频内容性质的创作声明，使用需求定义的选项；与内容授权声明独立配置。 */
+    /** 视频内容性质的创作声明，使用需求定义的选项。 */
     declaration: string
       .refine(
         (value) =>
@@ -148,8 +148,6 @@ export const configSchema = section({
         '不支持的创作声明'
       )
       .optional(),
-    /** 是否声明“内容为自制：未经作者允许，禁止转载”；显式 false 表示关闭。 */
-    no_reprint: boolean.optional(),
     /** 稿件所属分区，按页面上的分区名称填写。 */
     category: string.optional(),
     /** 目标标签列表，不允许重复；空数组表示清空，不擅自增加标签。 */
@@ -164,9 +162,17 @@ export const configSchema = section({
     /** 期望的发布时间，必须含时区且为有效日历日期；仅指定时间时要求页面已启用定时。 */
     at: date.optional(),
     /** 希望加入的已有合集名称。 */
-    collection: string.optional()
+    collection: string.optional(),
+    /** 是否生成合集更新推送；需配置非空 collection，省略时默认 true。 */
+    collection_update_push: boolean.optional()
   })
     .superRefine((value, ctx) => {
+      if (value.collection_update_push !== undefined && !value.collection?.trim())
+        ctx.addIssue({
+          code: 'custom',
+          path: ['collection_update_push'],
+          message: '配置合集更新推送必须指定非空合集'
+        });
       if (value.scheduled === true && !value.at)
         ctx.addIssue({
           code: 'custom',
@@ -180,6 +186,11 @@ export const configSchema = section({
           message: '关闭定时发布时不能指定时间'
         });
     })
+    .transform((value) =>
+      value.collection?.trim()
+        ? { ...value, collection_update_push: value.collection_update_push ?? true }
+        : value
+    )
     .optional(),
   /** 展示设置：水印、可见范围与个人空间展示分别配置。 */
   display: section({
@@ -200,9 +211,7 @@ export const configSchema = section({
     /** 是否开启杜比音效。 */
     dolby_audio: boolean.optional(),
     /** 是否开启 Hi-Res 无损音质。 */
-    hires_audio: boolean.optional(),
-    /** 是否启用全景视频。 */
-    panorama: boolean.optional()
+    hires_audio: boolean.optional()
   }).optional(),
   /** 互动设置：粉丝动态文案及评论、弹幕开关。 */
   interaction: section({

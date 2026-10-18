@@ -2,6 +2,16 @@ import { one, visible } from './controls';
 import { assignFile, waitFor as poll, click, type Operation } from './operation';
 import type { Evidence } from '../workflow/port';
 
+export function subtitleLanguage(value: unknown): string | undefined {
+  return typeof value === 'string'
+    ? new Map([
+        ['中文', '中文'],
+        ['英语', 'English'],
+        ['日语', '日本語']
+      ]).get(value)
+    : undefined;
+}
+
 export function createSubtitles(doc: Document, expand: (operation: Operation) => Promise<void>) {
   const all = <T extends Element = HTMLElement>(selector: string, root: ParentNode = doc) =>
     Array.from(root.querySelectorAll<T>(selector)).filter(visible);
@@ -39,7 +49,9 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
   }
   const rows = () => all('.modal-content-file-list-item', subtitleDialog());
   const languageRows = (language: string) =>
-    rows().filter((e) => e.querySelector('.type')?.textContent?.trim() === language);
+    rows().filter(
+      (e) => e.querySelector('.type')?.textContent?.trim() === subtitleLanguage(language)
+    );
   async function closeSubtitle(operation: Operation, confirm: boolean) {
     operation.check();
     click(exact('.modal-footer-button', confirm ? '确认' : '取消', subtitleDialog()), operation);
@@ -81,6 +93,8 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
   }
   return {
     async applySubtitle(language: string, file: File, operation: Operation) {
+      const label = subtitleLanguage(language);
+      if (!label) throw new Error(`未接入字幕语言：${language}`);
       subtitles.delete(language);
       await openSubtitle(operation);
       const existing = languageRows(language);
@@ -93,7 +107,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
       }
       stage = `选择 ${language} 字幕语言`;
       const select = get<HTMLInputElement>('input[placeholder="选择字幕语言"]', subtitleDialog());
-      if (select.value !== language) {
+      if (select.value !== label) {
         click(select, operation);
         await waitFor(
           () => (all('.bcc-option', subtitleDialog()).length ? true : undefined),
@@ -104,9 +118,9 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
             (e) =>
               e
                 .querySelector('.modal-content-upload-select-option-text')
-                ?.childNodes[0]?.textContent?.trim() === language
+                ?.childNodes[0]?.textContent?.trim() === label
           ),
-          language
+          label
         );
         if (option.classList.contains('is-disabled')) throw new Error('页面不允许选择此字幕语言');
         click(option, operation);
@@ -114,7 +128,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
       await waitFor(
         () =>
           get<HTMLInputElement>('input[placeholder="选择字幕语言"]', subtitleDialog()).value ===
-          language
+          label
             ? true
             : undefined,
         operation
@@ -141,10 +155,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
       );
       await closeSubtitle(operation, true);
       await waitFor(
-        () =>
-          all('.subtitle-list .text').some((e) => e.textContent?.trim() === `【${language}】`)
-            ? true
-            : undefined,
+        () => (all('.subtitle-list .operate').length === 1 ? true : undefined),
         operation
       );
       subtitles.set(language, file.name);

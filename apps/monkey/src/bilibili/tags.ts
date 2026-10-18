@@ -1,5 +1,12 @@
 import { FieldReadbackError } from '../workflow/port';
 
+export function validateTagCapacity(tags: readonly string[], topics: readonly string[]) {
+  if (tags.length + topics.length > 10)
+    throw new Error('普通标签与话题合计不能超过页面的 10 个名额');
+  if (tags.some((tag) => topics.includes(tag)))
+    throw new Error('普通标签与话题同名，页面无法独立保留两项，请从普通标签中移除该名称');
+}
+
 export interface TagControls {
   read(): string[];
   remove(index: number, tag: string): Promise<void>;

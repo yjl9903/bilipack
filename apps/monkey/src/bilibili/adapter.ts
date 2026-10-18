@@ -5,7 +5,7 @@ import { selectors } from './selectors';
 import { unique } from './controls';
 import { createFields, matches } from './fields';
 import { createCover } from './cover';
-import { createSubtitles } from './subtitles';
+import { createSubtitles, subtitleLanguage } from './subtitles';
 import { createOperation, waitFor, assignFile } from './operation';
 import type { UploadEntry } from '../entry/port';
 
@@ -40,8 +40,6 @@ export function createBilibiliAdapter(
   };
   const capability = (field: string, value?: unknown) => {
     if (field === 'cover') return { available: true };
-    if (field.startsWith('media.') || (field === 'commercial.enabled' && value === true))
-      return { available: false, reason: `${field}：高级媒体与启用商业推广尚未实测接入` };
     const editing =
       new URL(readContext().identity, 'https://member.bilibili.com').searchParams.get('type') ===
       'edit';
@@ -55,10 +53,10 @@ export function createBilibiliAdapter(
         available: false,
         reason: '已发布稿件不在视频编辑页操作字幕；请通过字幕管理或播放器字幕入口处理'
       };
-    if (field === 'subtitles' && value !== undefined && value !== '中文')
+    if (field === 'subtitles' && value !== undefined && !subtitleLanguage(value))
       return {
         available: false,
-        reason: '当前已实测的新投稿字幕语言为中文；其他语言暂未接入，将跳过'
+        reason: '当前已实测的新投稿字幕语言为中文、英语、日语；其他语言暂未接入，将跳过'
       };
     if (
       editing &&
@@ -95,6 +93,12 @@ export function createBilibiliAdapter(
     // Comparing an existing form also needs the native collapsed section opened.
     if (/^(display|interaction|media)\./.test(target.field)) await fields.expand(operation);
     const actual = await waitFor(() => readField(target.field), operation);
+    if (target.field === 'commercial.enabled' && target.value === true && actual === true)
+      return {
+        matches: false,
+        actual,
+        message: '已开启商业推广信息；合作类型与推广详情需在原页面手动补充确认'
+      };
     const matched = matches(target.field, actual, target.value);
     return {
       matches: matched,
