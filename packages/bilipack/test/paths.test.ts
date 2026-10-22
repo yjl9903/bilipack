@@ -1,5 +1,7 @@
 import { it, expect } from 'vitest';
+
 import { normalizePath } from '../src';
+
 it.each(['/a', '../a', 'a/../b', 'C:/a', 'https://x/a', 'a\\b', '.', 'a\u0000b'])(
   'rejects %s',
   (path) => expect(() => normalizePath(path)).toThrow()

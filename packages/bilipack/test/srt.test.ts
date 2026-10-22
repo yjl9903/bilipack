@@ -1,5 +1,7 @@
 import { it, expect } from 'vitest';
+
 import { parseSrt } from '../src';
+
 it('validates SRT and preserves multiline text', () => {
   expect(parseSrt('\uFEFF1\r\n00:00:00,100 --> 00:00:01,000\r\n甲\r\n乙')[0]).toEqual({
     start: 100,

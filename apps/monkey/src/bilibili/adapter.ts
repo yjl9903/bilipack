@@ -40,6 +40,29 @@ export function createBilibiliAdapter(
   };
   const capability = (field: string, value?: unknown) => {
     if (field === 'cover') return { available: true };
+    if (['info.source', 'info.topic', 'display.watermark'].includes(field)) {
+      let declaration: unknown;
+      try {
+        declaration = fields.read('info.declaration');
+      } catch {
+        // An unavailable editor is not evidence that a declaration hides a field.
+      }
+      if (
+        declaration === '内容为转载' &&
+        (field === 'info.topic' || (field === 'display.watermark' && value !== false))
+      )
+        return {
+          available: false,
+          reason: `当前创作声明为转载，页面不提供${field === 'info.topic' ? '参与话题' : '水印'}选项，已跳过`
+        };
+      if (
+        field === 'info.source' &&
+        typeof declaration === 'string' &&
+        declaration &&
+        declaration !== '内容为转载'
+      )
+        return { available: false, reason: '当前创作声明不是转载，页面不提供转载来源，已跳过' };
+    }
     const editing =
       new URL(readContext().identity, 'https://member.bilibili.com').searchParams.get('type') ===
       'edit';
@@ -86,10 +109,21 @@ export function createBilibiliAdapter(
       reason: `${field}：当前页面能力未接入或账号不支持`
     };
   };
-  const readField = fields.read;
+  const reprintWatermark = (field: string) =>
+    field === 'display.watermark' && fields.read('info.declaration') === '内容为转载';
+  const readField = (field: string) => (reprintWatermark(field) ? false : fields.read(field));
   const verifyField = async (target: FieldTarget, signal: AbortSignal, page: PageContext) => {
     const operation = createOperation(readContext, page, signal);
     operation.check();
+    if (reprintWatermark(target.field))
+      return {
+        matches: target.value === false,
+        actual: false,
+        message:
+          target.value === false
+            ? '当前创作声明为转载，不添加水印，符合配置；无需操作水印控件'
+            : '当前创作声明为转载，不支持添加水印'
+      };
     // Comparing an existing form also needs the native collapsed section opened.
     if (/^(display|interaction|media)\./.test(target.field)) await fields.expand(operation);
     const actual = await waitFor(() => readField(target.field), operation);
@@ -158,6 +192,10 @@ export function createBilibiliAdapter(
     async applyField(target, signal, page) {
       const operation = createOperation(readContext, page, signal);
       operation.check();
+      if (reprintWatermark(target.field)) {
+        if (target.value !== false) throw new Error('当前创作声明为转载，不支持添加水印');
+        return;
+      }
       await fields.apply(target, operation);
       operation.check();
     },

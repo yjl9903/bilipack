@@ -1,5 +1,7 @@
 import { it, expect } from 'vitest';
+
 import { parseConfig, fieldTargets } from '../src';
+
 it('preserves absence, explicit false, empty strings and lists', () => {
   const config = parseConfig('[info]\ntitle=""\ntags=[]\n[display]\nwatermark=false');
   expect(config.info).toEqual({ title: '', tags: [] });

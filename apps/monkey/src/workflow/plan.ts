@@ -46,7 +46,10 @@ export function plan(prepared: Prepared, page: PageContext): Step[] {
         ? ['editor.ready', 'publish.scheduled']
         : target.field === 'publish.collection_update_push'
           ? ['editor.ready', 'publish.collection']
-          : ['editor.ready'],
+          : prepared.config.info?.declaration !== undefined &&
+              ['info.source', 'info.topic', 'display.watermark'].includes(target.field)
+            ? ['editor.ready', 'info.declaration']
+            : ['editor.ready'],
     async execute(c) {
       const tags = c.prepared.config.info?.tags;
       if (

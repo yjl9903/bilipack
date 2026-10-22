@@ -34,6 +34,7 @@ const textSelectors: Record<string, string> = {
   'info.title': 'input[placeholder="请输入稿件标题"]',
   'info.category': '.video-human-type .select-controller .select-item-cont',
   'info.declaration': '.statement-main input.bcc-select-input-inner',
+  'info.source': 'input[placeholder^="转载视频请注明来源"]',
   'info.description': '[editor_id="desc_at_editor"] .ql-editor',
   'interaction.dynamic': '[editor_id="dynamic_at_editor"] .ql-editor'
 };
@@ -182,9 +183,10 @@ export function createFields(doc: Document) {
     )
       await expand(operation);
     if (field !== 'info.tags' && matches(field, read(field), value)) return;
-    if (field === 'info.title') {
+    if (field === 'info.title' || field === 'info.source') {
       const el = get<HTMLInputElement>(textSelectors[field]);
-      if (el.maxLength >= 0 && value.length > el.maxLength) throw new Error('标题超出页面限制');
+      if (el.maxLength >= 0 && value.length > el.maxLength)
+        throw new Error(`${field === 'info.title' ? '标题' : '转载来源'}超出页面限制`);
       writeText(el, value, operation);
       operation.write(() => el.blur());
     } else if (field === 'info.description' || field === 'interaction.dynamic') {

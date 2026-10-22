@@ -12,6 +12,58 @@ function diagnostics(source: string): Diagnostic[] {
 }
 
 describe('configuration schema contracts', () => {
+  it('preserves a reprint source verbatim and allows source-only updates', () => {
+    const source = ' 转自 https://example.com/video，2026-10-22 ';
+    for (const declaration of ['', '\ndeclaration="内容为转载"']) {
+      const config = parseConfig(`[info]\nsource="${source}"${declaration}`);
+      expect(config.info?.source).toBe(source);
+      expect(fieldTargets(config)).toContainEqual({ field: 'info.source', value: source });
+      expect(config.info?.declaration).toBe(declaration ? '内容为转载' : undefined);
+    }
+    expect(parseConfig('[info]\ntitle="标题"').info).not.toHaveProperty('source');
+  });
+
+  it('requires a nonempty source when explicitly selecting reprint', () => {
+    expect(diagnostics('[info]\ndeclaration="内容为转载"')).toContainEqual({
+      field: 'info.source',
+      code: 'config',
+      message: '内容为转载时必须提供转载来源'
+    });
+    for (const source of ['', '  '])
+      expect(diagnostics(`[info]\ndeclaration="内容为转载"\nsource="${source}"`)).toContainEqual({
+        field: 'info.source',
+        code: 'config',
+        message: '转载来源不能为空'
+      });
+    expect(diagnostics('[info]\nsource=123')).toContainEqual({
+      field: 'info.source',
+      code: 'config',
+      message: '必须是 string'
+    });
+  });
+
+  it.each([
+    '内容无需标注',
+    '含AI生成内容',
+    '含虚构演绎内容',
+    '内容含营销信息',
+    '个人观点，仅供参考'
+  ])(
+    'rejects a source combined with %s without adding fields to that declaration',
+    (declaration) => {
+      expect(parseConfig(`[info]\ndeclaration="${declaration}"`)).toEqual({
+        info: { declaration }
+      });
+      expect(
+        diagnostics(`[info]\ndeclaration="${declaration}"\nsource="https://example.com"`)
+      ).toContainEqual({
+        field: 'info.source',
+        code: 'config',
+        message: '转载来源不能与非转载声明同时配置'
+      });
+    }
+  );
+
   it('defaults collection update push only when a nonempty collection is configured', () => {
     const config = parseConfig('[publish]\ncollection="合集"');
     expect(config.publish).toEqual({ collection: '合集', collection_update_push: true });

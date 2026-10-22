@@ -148,13 +148,34 @@ export const configSchema = section({
         '不支持的创作声明'
       )
       .optional(),
+    /** 转载链接及来源说明；保留原文，仅在转载声明下填写。 */
+    source: string.refine((value) => !!value.trim(), '转载来源不能为空').optional(),
     /** 稿件所属分区，按页面上的分区名称填写。 */
     category: string.optional(),
     /** 目标标签列表，不允许重复；空数组表示清空，不擅自增加标签。 */
     tags: tags.optional(),
     /** 希望参与的平台话题或活动，与标签分别配置，不擅自加入话题。 */
     topic: string.optional()
-  }).optional(),
+  })
+    .superRefine((value, ctx) => {
+      if (value.declaration === '内容为转载' && value.source === undefined)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['source'],
+          message: '内容为转载时必须提供转载来源'
+        });
+      if (
+        value.source !== undefined &&
+        value.declaration !== undefined &&
+        value.declaration !== '内容为转载'
+      )
+        ctx.addIssue({
+          code: 'custom',
+          path: ['source'],
+          message: '转载来源不能与非转载声明同时配置'
+        });
+    })
+    .optional(),
   /** 发布与归档设置；自动设置后仍由用户检查并提交。 */
   publish: section({
     /** 是否定时发布：true 必须提供 at，false 不能同时指定 at；省略时保持开关原状。 */

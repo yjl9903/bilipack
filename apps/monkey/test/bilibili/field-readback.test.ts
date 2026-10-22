@@ -63,6 +63,96 @@ it('exposes verified fields while preserving edit-page restrictions', () => {
     expect(editing.capability(field, '中文').available).toBe(false);
 });
 
+it.each([
+  '内容无需标注',
+  '含AI生成内容',
+  '含虚构演绎内容',
+  '内容含营销信息',
+  '个人观点，仅供参考',
+  '内容为转载'
+])(
+  'derives source, topic and watermark capabilities from the current declaration: %s',
+  (declaration) => {
+    fields.read.mockReturnValue(declaration);
+    const adapter = capabilityAdapter();
+    const reprint = declaration === '内容为转载';
+    expect(adapter.capability('info.source').available).toBe(reprint);
+    expect(adapter.capability('info.topic', '').available).toBe(!reprint);
+    for (const value of [true, false])
+      expect(adapter.capability('display.watermark', value).available).toBe(!reprint || !value);
+    expect(adapter.capability('commercial.enabled', true).available).toBe(true);
+    expect(adapter.capability('info.tags', []).available).toBe(true);
+    fields.read.mockReturnValue(reprint ? '内容无需标注' : '内容为转载');
+    expect(adapter.capability('info.source').available).toBe(!reprint);
+    expect(adapter.capability('display.watermark', true).available).toBe(reprint);
+    expect(adapter.capability('display.watermark', false).available).toBe(true);
+  }
+);
+
+it('satisfies watermark false on reprints without accessing the hidden checkbox', async () => {
+  fields.read.mockImplementation((field) => {
+    if (field === 'info.declaration') return '内容为转载';
+    throw new Error('不存在水印控件');
+  });
+  const adapter = capabilityAdapter();
+  const target = { field: 'display.watermark', value: false } as const;
+  const signal = new AbortController().signal;
+  expect(adapter.readField(target.field)).toBe(false);
+  await adapter.applyField(target, signal, adapter.context());
+  expect(await adapter.verifyField(target, signal, adapter.context())).toMatchObject({
+    matches: true,
+    actual: false,
+    message: expect.stringContaining('无需操作水印控件')
+  });
+  expect(fields.expand).not.toHaveBeenCalled();
+  expect(fields.apply).not.toHaveBeenCalled();
+  expect(fields.read.mock.calls.every(([field]) => field === 'info.declaration')).toBe(true);
+});
+
+it('rejects watermark true on reprints even if called directly', async () => {
+  fields.read.mockReturnValue('内容为转载');
+  const adapter = capabilityAdapter();
+  const target = { field: 'display.watermark', value: true } as const;
+  const signal = new AbortController().signal;
+  expect(adapter.capability(target.field, target.value).available).toBe(false);
+  await expect(adapter.applyField(target, signal, adapter.context())).rejects.toThrow(
+    '不支持添加水印'
+  );
+  expect(await adapter.verifyField(target, signal, adapter.context())).toMatchObject({
+    matches: false,
+    actual: false
+  });
+  expect(fields.apply).not.toHaveBeenCalled();
+});
+
+it.each(['内容无需标注', undefined])(
+  'does not turn a missing watermark control or unreadable declaration into false: %s',
+  async (declaration) => {
+    fields.read.mockImplementation((field) => {
+      if (field === 'info.declaration' && declaration) return declaration;
+      throw new Error('控件无法读取');
+    });
+    const adapter = capabilityAdapter();
+    expect(() => adapter.readField('display.watermark')).toThrow('控件无法读取');
+    await expect(
+      adapter.verifyField(
+        { field: 'display.watermark', value: false },
+        new AbortController().signal,
+        adapter.context()
+      )
+    ).rejects.toThrow('控件无法读取');
+  }
+);
+
+it('does not infer declaration restrictions when the current declaration cannot be read', () => {
+  fields.read.mockImplementation(() => {
+    throw new Error('表单尚未就绪');
+  });
+  const adapter = capabilityAdapter();
+  for (const field of ['info.source', 'info.topic', 'display.watermark'])
+    expect(adapter.capability(field).available).toBe(true);
+});
+
 it('reports enabled commercial details as unfinished but verifies explicit disabling', async () => {
   const adapter = capabilityAdapter();
   const signal = new AbortController().signal;
@@ -89,7 +179,8 @@ it('opens collapsed settings before comparing their fields without writing value
   fields.expand.mockImplementation(async () => {
     expanded = true;
   });
-  fields.read.mockImplementation(() => {
+  fields.read.mockImplementation((field) => {
+    if (field === 'info.declaration') return '内容无需标注';
     if (!expanded) throw new Error('找到 0 个控件');
     return false;
   });
@@ -112,7 +203,9 @@ it('opens collapsed settings before comparing their fields without writing value
   ]);
   expect(results.map((result) => result.matches)).toEqual([true, true]);
   expect(fields.expand.mock.invocationCallOrder[0]).toBeLessThan(
-    fields.read.mock.invocationCallOrder[0]
+    fields.read.mock.invocationCallOrder[
+      fields.read.mock.calls.findIndex(([field]) => field === 'display.watermark')
+    ]
   );
   expect(fields.apply).not.toHaveBeenCalled();
 });
@@ -158,7 +251,7 @@ it('preserves a real expansion failure instead of claiming a successful read', a
       adapter.context()
     )
   ).rejects.toThrow('更多设置不可操作');
-  expect(fields.read).not.toHaveBeenCalled();
+  expect(fields.read).toHaveBeenCalledExactlyOnceWith('info.declaration');
 });
 
 it('does not expand the page after comparison has been cancelled', async () => {
