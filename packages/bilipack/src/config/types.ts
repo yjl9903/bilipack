@@ -37,3 +37,8 @@ export function fieldTargets(config: Config): FieldTarget[] {
       (order.includes(b.field) ? order.indexOf(b.field) : b.field === 'info.tags' ? 100 : 99)
   );
 }
+
+/** Normalize the legacy single-video input without changing the original configuration. */
+export function videoEntries(config: Readonly<Config>): NonNullable<Config['videos']> {
+  return config.videos ?? (config.video ? [config.video] : []);
+}

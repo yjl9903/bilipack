@@ -166,7 +166,7 @@ it.each(['click', 'drop'] as const)(
         action === 'click' ? [[], []] : [[[video]], [[video]]]
       );
       expect(importDirectory).not.toHaveBeenCalled();
-      expect(adapter.uploadVideo).not.toHaveBeenCalled();
+      expect(adapter.uploadVideos).not.toHaveBeenCalled();
       expect(adapter.applyField).not.toHaveBeenCalled();
     } finally {
       dispose();

@@ -6,8 +6,7 @@ export function summarize(results: readonly Result[]): string {
   const status = executionStatus(results);
   if (status === 'completed') return '请检查投稿表单，确认后自行提交或保存。';
   if (status === 'error') return '操作未完成，请查看结果。';
-  if (results.some((r) => r.skipReason))
-    return '部分项目未完成，含不支持的项目，请查看结果。';
+  if (results.some((r) => r.skipReason)) return '部分项目未完成，含不支持的项目，请查看结果。';
   return '部分项目未完成，请查看结果并处理。';
 }
 
@@ -27,29 +26,27 @@ export function presentAttachments(prepared: Prepared): Attachment[] {
   const subtitles: Attachment[] = prepared.subtitles.map((s) => ({
     type: 'subtitle',
     language: s.language,
+    part: s.part,
     name: s.file.webkitRelativePath || s.file.name,
-    size: s.file.size,
-    kind: `字幕 · ${s.language}`,
     source: s.source
   }));
   return [
-    ...(prepared.video
-      ? [
-          {
-            type: 'video' as const,
-            file: prepared.video,
-            name: prepared.config.video!.file,
-            size: prepared.video.size,
-            kind: '视频'
-          }
-        ]
-      : []),
+    ...prepared.videos.flatMap((video) =>
+      video.file
+        ? [
+            {
+              type: 'video' as const,
+              part: video.part,
+              title: video.title,
+              file: video.file,
+              name: video.path!
+            }
+          ]
+        : []
+    ),
     ...prepared.covers.map((c) => ({
       type: 'cover' as const,
       cover: { ratio: c.ratio, source: c.source },
-      name: c.source.file.name,
-      size: c.source.file.size,
-      kind: `本地目标封面 ${c.ratio}（非页面结果）`,
       url: c.url
     })),
     ...subtitles

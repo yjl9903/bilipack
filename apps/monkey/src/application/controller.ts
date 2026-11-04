@@ -35,7 +35,7 @@ export function createController(adapter: PageAdapter) {
     state = { ...state, ...patch };
     listeners.forEach((f) => f(state));
   };
-  const samePage = (a: PageContext, b: PageContext) => matchesContext(a, b) && b.count === 1;
+  const samePage = (a: PageContext, b: PageContext) => matchesContext(a, b) && b.count > 0;
   const execute = async (
     input: Prepared,
     page: PageContext,
@@ -44,7 +44,10 @@ export function createController(adapter: PageAdapter) {
   ) => {
     publish({ panelStatus: 'executing' });
     adapter.assertContext(page);
-    if (page.video === 'absent') pendingPanelUpload = { ...page };
+    if (page.video === 'absent') {
+      page.uploadCount = input.videos.length;
+      pendingPanelUpload = { ...page };
+    }
     const results = await run(
       plan(input, page),
       {

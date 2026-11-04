@@ -77,7 +77,7 @@ it('hides the launcher on the upload page, expands the controlled editor once, a
         finishUpload = resolve;
       })
   );
-  adapter.uploadVideo = vi.fn(async () => {
+  adapter.uploadVideos = vi.fn(async () => {
     update({ count: 1, video: 'uploading', editor: false });
   });
   entry.click();
@@ -119,7 +119,7 @@ it('remembers the controlled entry when the upload finishes before the next page
     state = value;
   });
   // Adapter reads see the completed upload before the observer notifies the controller.
-  adapter.uploadVideo = vi.fn(async () => {
+  adapter.uploadVideos = vi.fn(async () => {
     changePage({ count: 1, video: 'ready', editor: true });
   });
   await controller.importDirectory();

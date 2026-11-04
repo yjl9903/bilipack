@@ -19,7 +19,7 @@ Follow the [development workflow](docs/documentation.md). Architecture explains 
 
 ## Build, Test, and Development Commands
 
-Use Node.js 24 or newer and the package-manager version declared in `package.json` (`pnpm@12.8.1`).
+Use Node.js 24 or newer and the package-manager version declared in `package.json`.
 
 - `pnpm install --frozen-lockfile`: install the locked workspace dependencies.
 - `pnpm build`: build the library and userscript, including userscript metadata checks.

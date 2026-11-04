@@ -157,20 +157,6 @@ li {
   border-top: 1px solid var(--bilipack-border);
   font-size: 12px;
 }
-li strong {
-  color: #87632b;
-}
-.verified strong {
-  color: #287453;
-}
-.skipped strong {
-  color: var(--bilipack-muted);
-}
-.value {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  color: var(--bilipack-muted);
-}
 
 .drag-handle,
 .launcher {
@@ -656,20 +642,6 @@ li.dropdown-option {
   color: var(--bilipack-primary);
 }
 
-.pending strong,
-.waiting strong {
-  color: var(--bilipack-muted);
-}
-.running strong,
-.verifying strong {
-  color: var(--bilipack-primary);
-}
-.failed strong,
-.unverified strong,
-.blocked strong {
-  color: #c03434;
-}
-
 .cover-preview-title {
   margin: 0 0 8px;
   color: var(--bilipack-text);
@@ -736,9 +708,6 @@ li.dropdown-option {
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-.different strong {
-  color: #a96516;
 }
 
 .result-list {

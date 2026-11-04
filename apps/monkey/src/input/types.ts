@@ -1,7 +1,6 @@
 import type { Config, Position } from 'bilipack';
 export interface CoverImage {
   ratio: '16:9' | '4:3';
-  file: File;
   url: string;
   source: CoverSource;
 }
@@ -14,8 +13,8 @@ export interface Prepared {
   raw: string;
   config: Readonly<Config>;
   covers: CoverImage[];
-  subtitles: { language: string; file: File; source: string }[];
-  video?: File;
+  subtitles: { part: number; language: string; file: File; source: string }[];
+  videos: { part: number; path?: string; title?: string; file?: File }[];
 }
 
 export interface PreparationConditions {

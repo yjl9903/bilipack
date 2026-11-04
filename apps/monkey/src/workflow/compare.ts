@@ -19,14 +19,12 @@ export async function compare(
   }));
   const results: Result[] = [
     ...(page.video !== 'absent'
-      ? [
-          {
-            id: 'video.upload',
-            role: 'condition' as const,
-            status: 'skipped' as const,
-            message: '页面已有视频，跳过视频上传'
-          }
-        ]
+      ? Array.from({ length: page.count }, (_, index) => ({
+          id: page.count === 1 ? 'video.upload' : `videos.${index + 1}.upload`,
+          role: 'condition' as const,
+          status: 'skipped' as const,
+          message: '页面已有视频，跳过视频上传'
+        }))
       : []),
     ...fieldResults
   ];
@@ -78,6 +76,39 @@ export async function compare(
     }
     notify({ phase: 'compare', id: target.field });
   }
+  for (const video of prepared.videos) {
+    if (video.title === undefined) continue;
+    assert();
+    const id = `videos.${video.part}.title`;
+    const capability = adapter.capability('videos.title');
+    const result: Result = {
+      id,
+      role: 'target',
+      status: 'unverified',
+      expected: video.title,
+      message: '尚未执行写入'
+    };
+    if (!capability.available)
+      Object.assign(result, {
+        status: 'skipped',
+        skipReason: 'unsupported',
+        message: capability.reason
+      });
+    else
+      try {
+        const actual = adapter.readVideo(video.part).title;
+        Object.assign(result, {
+          actual,
+          status: actual === video.title ? 'verified' : 'different',
+          message: '已比对分 P 名称，尚未执行写入'
+        });
+      } catch (error) {
+        result.message = `暂无法比对：${(error as Error).message}`;
+      }
+    assert();
+    results.push(result);
+    notify({ phase: 'compare', id });
+  }
   for (const attachment of [
     ...prepared.covers.map((cover) => ({
       id: `cover.${cover.ratio}`,
@@ -86,8 +117,11 @@ export async function compare(
       value: prepared.config.cover
     })),
     ...prepared.subtitles.map((subtitle) => ({
-      id: `subtitles.${subtitle.language}`,
-      field: 'subtitles',
+      id:
+        page.count > 1
+          ? `subtitles.P${subtitle.part}.${subtitle.language}`
+          : `subtitles.${subtitle.language}`,
+      field: page.count > 1 ? 'subtitles.parts' : 'subtitles',
       expected: subtitle.file.name,
       value: subtitle.language
     }))

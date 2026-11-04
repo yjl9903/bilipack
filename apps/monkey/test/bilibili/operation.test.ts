@@ -1,8 +1,20 @@
 import { beforeEach, expect, it, vi } from 'vitest';
+import * as nativeControls from '../../src/bilibili/controls';
 import { createBilibiliAdapter } from '../../src/bilibili/adapter';
-import { createOperation, waitFor, writeText, type Operation } from '../../src/bilibili/operation';
+import {
+  createOperation,
+  waitFor,
+  writeText,
+  captureFileInput,
+  type Operation
+} from '../../src/bilibili/operation';
 import type { PageContext } from '../../src/workflow/port';
-const controls = vi.hoisted(() => ({ apply: vi.fn(), expand: vi.fn(), read: vi.fn() }));
+const controls = vi.hoisted(() => ({
+  apply: vi.fn(),
+  expand: vi.fn(),
+  read: vi.fn(),
+  rows: vi.fn()
+}));
 
 vi.mock('../../src/bilibili/fields', async (original) => ({
   ...(await original<typeof import('../../src/bilibili/fields')>()),
@@ -23,9 +35,14 @@ vi.mock('../../src/bilibili/cover', () => ({
 vi.mock('../../src/bilibili/subtitles', async (original) => ({
   ...(await original<typeof import('../../src/bilibili/subtitles')>()),
   createSubtitles: () => ({
-    applySubtitle: (language: string, file: File, operation: Operation) =>
+    applySubtitle: (_language: string, file: File, operation: Operation) =>
       controls.apply(file, operation)
   })
+}));
+
+vi.mock('../../src/bilibili/videos', async (original) => ({
+  ...(await original<typeof import('../../src/bilibili/videos')>()),
+  createVideoReader: () => controls.rows
 }));
 
 beforeEach(() => vi.resetAllMocks());
@@ -40,7 +57,12 @@ const initial = (): PageContext => ({
 });
 
 const reader = (read: () => PageContext) =>
-  Object.assign(read, { expectUpload: vi.fn(), cancelExpectedUpload: vi.fn() });
+  Object.assign(read, {
+    expectUpload: vi.fn(),
+    cancelExpectedUpload: vi.fn(),
+    expectRename: vi.fn(),
+    cancelExpectedRename: vi.fn()
+  });
 
 it.each(['field', 'covers', 'subtitle'] as const)(
   'stops %s writes within a long operation without waiting for lifecycle observation',
@@ -123,16 +145,19 @@ it('accepts the first video on the bound empty page at both boundaries', () => {
 
 it('continues independent video observation after stopping form writes, but rejects a different draft', async () => {
   let page = { ...initial(), submissionWaiting: true };
+  controls.rows.mockReturnValue([
+    { node: document.createElement('div'), title: 'v', state: 'ready' }
+  ]);
   const adapter = createBilibiliAdapter(
     document,
     reader(() => page)
   );
   const signal = new AbortController().signal;
   await expect(adapter.applyCovers([], signal, initial())).rejects.toThrow('投稿等待');
-  await expect(adapter.waitVideo(signal, initial())).resolves.toBeUndefined();
+  await expect(adapter.waitVideo(signal, initial(), 1)).resolves.toBeUndefined();
   expect(signal.aborted).toBe(false);
   page = { ...page, identity: 'different' };
-  await expect(adapter.waitVideo(signal, initial())).rejects.toThrow('稿件已变化');
+  await expect(adapter.waitVideo(signal, initial(), 1)).rejects.toThrow('稿件已变化');
 });
 
 it('allows submission observation but never permits writes through that operation', () => {
@@ -197,7 +222,33 @@ it('rejects upload at the platform boundary when an empty binding already has a 
   const adapter = createBilibiliAdapter(document, readContext);
   const bound = { ...page, editor: false, video: 'absent' as const, count: 0 };
   await expect(
-    adapter.uploadVideo(new File(['v'], 'v.mp4'), new AbortController().signal, bound)
+    adapter.uploadVideos([new File(['v'], 'v.mp4')], new AbortController().signal, bound)
   ).rejects.toThrow('已有视频');
   expect(readContext.expectUpload).not.toHaveBeenCalled();
+});
+
+it('captures a detached file input and restores the native picker even on failure', () => {
+  vi.spyOn(nativeControls, 'click').mockImplementation((element) =>
+    (element as HTMLElement).click()
+  );
+  const button = document.createElement('button');
+  button.getClientRects = () => [{ width: 10 }] as unknown as DOMRectList;
+  document.body.append(button);
+  const input = document.createElement('input');
+  input.type = 'file';
+  const original = HTMLInputElement.prototype.click;
+  const page = initial();
+  const operation = createOperation(() => page, page, new AbortController().signal);
+  button.onclick = () => input.click();
+  expect(captureFileInput(button, operation)).toBe(input);
+  expect(input.isConnected).toBe(false);
+  expect(HTMLInputElement.prototype.click).toBe(original);
+  const failing = {
+    ...operation,
+    write: () => {
+      throw new Error('stale');
+    }
+  };
+  expect(() => captureFileInput(button, failing)).toThrow('stale');
+  expect(HTMLInputElement.prototype.click).toBe(original);
 });

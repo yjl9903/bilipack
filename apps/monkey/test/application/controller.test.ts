@@ -30,7 +30,7 @@ it.each([false, true])(
     adapter.context = () => ({ ...page });
     const uploadPage = adapter.context();
     const controller = createTestController(adapter);
-    adapter.uploadVideo = vi.fn(async () => {
+    adapter.uploadVideos = vi.fn(async () => {
       page = { ...page, video: 'uploading', count: 1 };
       controller.updatePage(page);
       expect(adapter.applyField).not.toHaveBeenCalled();
@@ -76,11 +76,10 @@ it.each([false, true])(
     expect(pendingSnapshot.find((r) => r.id === 'video.ready')?.status).toBe('running');
     expect(state.busy).toBe(false);
     expect(state.currentStep).toBeUndefined();
-    expect(adapter.uploadVideo).toHaveBeenCalledExactlyOnceWith(
-      video,
-      expect.any(AbortSignal),
-      uploadPage
-    );
+    expect(adapter.uploadVideos).toHaveBeenCalledExactlyOnceWith([video], expect.any(AbortSignal), {
+      ...uploadPage,
+      uploadCount: 1
+    });
     expect(adapter.waitVideo).toHaveBeenCalledOnce();
     expect(adapter.applyField).toHaveBeenCalledOnce();
     expect(verifyField).toHaveBeenCalledOnce();
@@ -146,7 +145,7 @@ it('retains existing results if the next picker is cancelled', async () => {
   });
   await controller.importDirectory();
   expect(state.results[0]).toMatchObject({ id: 'video.upload', status: 'skipped' });
-  expect(adapter.uploadVideo).not.toHaveBeenCalled();
+  expect(adapter.uploadVideos).not.toHaveBeenCalled();
   const results = state.results;
   click.mockImplementation(function (this: HTMLInputElement) {
     this.dispatchEvent(new Event('cancel'));
@@ -183,7 +182,7 @@ it('retains the directory name on validation failure and clears only the local s
     summary: ''
   });
   expect(adapter.applyField).not.toHaveBeenCalled();
-  expect(adapter.uploadVideo).not.toHaveBeenCalled();
+  expect(adapter.uploadVideos).not.toHaveBeenCalled();
   controller.dispose();
 });
 
@@ -235,9 +234,9 @@ it('settles live progress and preserves earlier subtitle evidence when a route c
   await job;
   expect(state.busy).toBe(false);
   expect(state.currentStep).toBeUndefined();
-  expect(
-    state.results.some((r) => ['running', 'pending', 'verifying', 'waiting'].includes(r.status))
-  ).toBe(false);
+  expect(state.results.some((r) => ['running', 'pending', 'verifying'].includes(r.status))).toBe(
+    false
+  );
   expect(state.results.find((r) => r.id === 'subtitles.中文')?.status).toBe('verified');
   expect(state.results.find((r) => r.id === 'subtitles.中文')?.message).toBe('done');
   expect(state.panelStatus).toBe('interrupted');
@@ -286,7 +285,7 @@ it.each(['ready', 'uploading'] as const)(
       { id: 'info.description', status: 'verified', expected: '相同简介', actual: '相同简介' }
     ]);
     expect(adapter.applyField).not.toHaveBeenCalled();
-    expect(adapter.uploadVideo).not.toHaveBeenCalled();
+    expect(adapter.uploadVideos).not.toHaveBeenCalled();
     expect(adapter.waitVideo).not.toHaveBeenCalled();
     expect(adapter.applyCovers).not.toHaveBeenCalled();
     expect(adapter.applySubtitle).not.toHaveBeenCalled();
@@ -294,7 +293,7 @@ it.each(['ready', 'uploading'] as const)(
     await controller.writeConfiguration();
     await write;
     expect(adapter.applyField).toHaveBeenCalledTimes(2);
-    expect(adapter.uploadVideo).not.toHaveBeenCalled();
+    expect(adapter.uploadVideos).not.toHaveBeenCalled();
     expect(state.canWrite).toBe(false);
     expect(state.comparison).toBe(false);
     expect(state.busy).toBe(false);
@@ -323,7 +322,7 @@ it.each(['observed', 'unobserved'] as const)(
     expect(state.canWrite).toBe(false);
     expect(state.panelStatus).toBe('interrupted');
     expect(adapter.applyField).not.toHaveBeenCalled();
-    expect(adapter.uploadVideo).not.toHaveBeenCalled();
+    expect(adapter.uploadVideos).not.toHaveBeenCalled();
     controller.dispose();
   }
 );
@@ -411,7 +410,7 @@ it.each(['ready', 'absent'] as const)(
       count: initialVideo === 'absent' ? 0 : 1
     };
     adapter.context = () => ({ ...page });
-    adapter.uploadVideo = vi.fn(async () => {
+    adapter.uploadVideos = vi.fn(async () => {
       page = { ...page, video: 'ready', count: 1 };
     });
     const apply = adapter.applyField;
@@ -443,7 +442,7 @@ it.each(['ready', 'absent'] as const)(
     expect(applyField.mock.calls.filter(([target]) => target.field === 'info.tags')).toHaveLength(
       2
     );
-    expect(adapter.uploadVideo).toHaveBeenCalledTimes(initialVideo === 'absent' ? 1 : 0);
+    expect(adapter.uploadVideos).toHaveBeenCalledTimes(initialVideo === 'absent' ? 1 : 0);
     expect(state.busy).toBe(false);
     controller.dispose();
   }

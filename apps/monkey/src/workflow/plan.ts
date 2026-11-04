@@ -1,41 +1,68 @@
 import { fieldTargets } from 'bilipack';
 import type { Prepared } from '../input/types';
-import type { Step } from './types';
+import type { RunContext, Step, StepGroup } from './types';
 import type { PageContext } from './port';
 export function plan(prepared: Prepared, page: PageContext): Step[] {
-  const steps: Step[] = [
-    {
-      id: 'video.upload',
-      role: page.video === 'absent' ? 'target' : 'condition',
-      expected: page.video === 'absent' ? prepared.video?.name : undefined,
-      retry: 'execute',
-      capability: { field: 'video' },
-      dependsOn: [],
-      ...(page.video !== 'absent' ? { skip: '页面已有视频，跳过视频上传' } : {}),
-      async execute(c) {
-        if (!c.prepared.video) throw new Error('缺少视频文件');
-        await c.adapter.uploadVideo(c.prepared.video, c.signal, c.page);
-      },
+  const count = page.count || prepared.videos.length;
+  const videoId = (part: number, action: string) =>
+    count === 1 ? `video.${action}` : `videos.${part}.${action}`;
+  const uploadIds = Array.from({ length: count }, (_, index) => videoId(index + 1, 'upload'));
+  const uploadGroup: StepGroup = {
+    id: 'videos.upload',
+    async execute(c) {
+      const files = c.prepared.videos.map((video) => {
+        if (!video.file) throw new Error(`P${video.part} 缺少视频文件`);
+        return video.file;
+      });
+      await c.adapter.uploadVideos(files, c.signal, c.page);
+    }
+  };
+  const steps: Step[] = Array.from({ length: count }, (_, index) => ({
+    id: uploadIds[index],
+    role: page.video === 'absent' ? 'target' : 'condition',
+    expected: page.video === 'absent' ? prepared.videos[index]?.file?.name : undefined,
+    group: uploadGroup,
+    ...(index === 0 ? { capability: { field: 'video' } } : {}),
+    dependsOn: index === 0 ? [] : [uploadIds[0]],
+    ...(page.video !== 'absent' ? { skip: '页面已有视频，跳过视频上传' } : {}),
+    verify(c) {
+      const actual = c.adapter.readVideo(index + 1).state;
+      const matches = ['uploading', 'ready'].includes(actual);
+      return {
+        matches,
+        actual,
+        message: matches ? '视频选择成功，已进入上传流程' : '未确认视频选择成功'
+      };
+    }
+  }));
+  steps.push({
+    id: 'editor.ready',
+    role: 'condition',
+    retry: 'execute',
+    dependsOn: uploadIds,
+    execute: (c) => c.adapter.waitEditor(c.signal, c.page),
+    verify: (c) => c.adapter.verifyEditor()
+  });
+  for (const video of prepared.videos) {
+    if (video.title === undefined) continue;
+    const title = video.title;
+    steps.push({
+      id: `videos.${video.part}.title`,
+      role: 'target',
+      expected: title,
+      capability: { field: 'videos.title' },
+      dependsOn: ['editor.ready'],
+      execute: (c) => c.adapter.renameVideo(video.part, title, c.signal, c.page),
       verify(c) {
-        const actual = c.adapter.context();
-        const matches =
-          actual.count === 1 && (actual.video === 'uploading' || actual.video === 'ready');
+        const actual = c.adapter.readVideo(video.part).title;
         return {
-          matches,
-          actual: actual.video,
-          message: matches ? '视频选择成功，已进入上传流程' : '未确认视频选择成功'
+          matches: actual === title,
+          actual,
+          message: actual === title ? '分 P 名称读回一致' : '分 P 名称与配置不一致'
         };
       }
-    },
-    {
-      id: 'editor.ready',
-      role: 'condition',
-      retry: 'execute',
-      dependsOn: ['video.upload'],
-      execute: (c) => c.adapter.waitEditor(c.signal, c.page),
-      verify: (c) => c.adapter.verifyEditor()
-    }
-  ];
+    });
+  }
   const fieldSteps: Step[] = fieldTargets(prepared.config).map((target) => ({
     id: target.field,
     role: 'target',
@@ -82,13 +109,12 @@ export function plan(prepared: Prepared, page: PageContext): Step[] {
     verify: (c) => c.adapter.verifyField(target, c.signal, c.page),
     ...(target.field === 'info.tags'
       ? {
-          repair: (c: import('./types').RunContext) =>
-            c.adapter.applyField(target, c.signal, c.page)
+          repair: (c: RunContext) => c.adapter.applyField(target, c.signal, c.page)
         }
       : {})
   }));
   steps.push(...fieldSteps.filter((step) => step.id !== 'info.tags'));
-  const coverGroup: import('./types').StepGroup = {
+  const coverGroup: StepGroup = {
     id: 'covers',
     execute: (c) => c.adapter.applyCovers(c.prepared.covers, c.signal, c.page)
   };
@@ -105,22 +131,23 @@ export function plan(prepared: Prepared, page: PageContext): Step[] {
   steps.push(...fieldSteps.filter((step) => step.id === 'info.tags'));
   for (const s of prepared.subtitles)
     steps.push({
-      id: `subtitles.${s.language}`,
+      id: count > 1 ? `subtitles.P${s.part}.${s.language}` : `subtitles.${s.language}`,
       role: 'target',
-      capability: { field: 'subtitles', value: s.language },
+      capability: { field: count > 1 ? 'subtitles.parts' : 'subtitles', value: s.language },
       dependsOn: ['editor.ready'],
       expected: s.file.name,
       execute: (c) => c.adapter.applySubtitle(s.language, s.file, c.signal, c.page),
       verify: (c) => c.adapter.verifySubtitle(s.language, c.signal, c.page)
     });
-  steps.push({
-    id: 'video.ready',
-    role: 'condition',
-    retry: 'execute',
-    allowDuringSubmission: true,
-    dependsOn: ['video.upload'],
-    execute: (c) => c.adapter.waitVideo(c.signal, c.page),
-    verify: (c) => c.adapter.verifyVideo()
-  });
+  for (let part = 1; part <= count; part++)
+    steps.push({
+      id: videoId(part, 'ready'),
+      role: 'condition',
+      retry: 'execute',
+      allowDuringSubmission: true,
+      dependsOn: [videoId(part, 'upload')],
+      execute: (c) => c.adapter.waitVideo(c.signal, c.page, part),
+      verify: (c) => c.adapter.verifyVideo(part)
+    });
   return steps;
 }

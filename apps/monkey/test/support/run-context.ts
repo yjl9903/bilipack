@@ -5,6 +5,7 @@ export function context(prepared: Partial<Prepared> = {}, adapter = fakeAdapter(
   return {
     prepared: {
       raw: '',
+      videos: [],
       config: { info: { title: '目标' } },
       covers: [],
       subtitles: [],

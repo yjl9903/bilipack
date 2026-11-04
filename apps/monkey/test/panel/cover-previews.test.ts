@@ -14,9 +14,6 @@ it.each(['single', 'dual'] as const)(
     const files: CoverAttachment[] = [
       {
         type: 'cover',
-        name: 'bilipack-wide.png',
-        size: 100,
-        kind: '旧说明',
         url: 'blob:wide',
         cover: {
           ratio: '16:9',
@@ -32,9 +29,6 @@ it.each(['single', 'dual'] as const)(
       },
       {
         type: 'cover',
-        name: 'bilipack-standard.png',
-        size: 200,
-        kind: '旧说明',
         url: 'blob:standard',
         cover: {
           ratio: '4:3',
@@ -62,8 +56,6 @@ it.each(['single', 'dual'] as const)(
         'blob:wide'
       ]);
       expect(host.querySelector('figcaption')).toBeNull();
-      expect(host.textContent).not.toContain('旧说明');
-      expect(host.textContent).not.toContain('bilipack-');
       const panels = [...host.querySelectorAll('.media-metadata')];
       expect(panels).toHaveLength(mode === 'single' ? 1 : 2);
       const filename = panels[0].querySelector<HTMLElement>('.metadata-filename')!;

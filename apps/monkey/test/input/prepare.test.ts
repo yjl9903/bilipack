@@ -11,7 +11,7 @@ it('prepares scheduling input without reading a page and takes explicit video re
 
 it('does not require a configured video file when video input is optional', async () => {
   const prepared = await prepare('[video]\nfile="missing.mp4"', new Map(), { requireVideo: false });
-  expect(prepared.video).toBeUndefined();
+  expect(prepared.videos[0]?.file).toBeUndefined();
 });
 
 it('rejects missing or invalid subtitles during input preparation', async () => {

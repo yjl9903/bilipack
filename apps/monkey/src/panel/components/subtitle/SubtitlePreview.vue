@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useId, watch } from 'vue';
 import type { SubtitleAttachment } from '../../../application/types';
+import { subtitleKey } from '../../utils/subtitles';
 import CodePreview from '../ui/CodePreview.vue';
 import DropdownSelect from '../ui/DropdownSelect.vue';
 
@@ -13,13 +14,13 @@ const subtitles = computed(() => props.files);
 watch(
   subtitles,
   (files) => {
-    if (!files.some((file) => file.language === selectedLanguage.value))
-      selectedLanguage.value = files[0]?.language ?? '';
+    if (!files.some((file) => subtitleKey(file, files) === selectedLanguage.value))
+      selectedLanguage.value = files[0] ? subtitleKey(files[0], files) : '';
   },
   { immediate: true }
 );
 const selected = computed(() =>
-  subtitles.value.find((file) => file.language === selectedLanguage.value)
+  subtitles.value.find((file) => subtitleKey(file, subtitles.value) === selectedLanguage.value)
 );
 const filename = computed(() => selected.value?.name.split(/[\\/]/).at(-1) ?? '');
 watch(selected, () => {
@@ -39,7 +40,7 @@ function showFilename(event: Event) {
         :id="languageId"
         v-model="selectedLanguage"
         label="字幕语言"
-        :options="subtitles.map((file) => file.language)"
+        :options="subtitles.map((file) => subtitleKey(file, subtitles))"
       />
     </div>
     <div

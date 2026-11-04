@@ -7,15 +7,28 @@ export function checkPageConditions(prepared: Prepared, page: PageContext, adapt
   const add = (field: string, message: string) =>
     diagnostics.push({ field, code: 'preflight', message });
   if (!page.target) add('page', '尚未识别可操作的投稿表单');
-  if (page.count > 1) add('video', '首版不支持多 P');
   if (page.video === 'unknown' || page.video === 'failed')
-    add('video', '视频状态不明或失败，不会替换已有视频');
-  if (page.video === 'absent' && prepared.video) {
-    try {
-      adapter.validateVideo(prepared.video);
-    } catch (error) {
-      add('video.file', (error as Error).message);
+    add('videos', '视频状态不明或失败，不会替换已有视频');
+  if (page.count > 0 && prepared.videos.length && prepared.videos.length !== page.count)
+    add('videos', '视频列表数量与页面分 P 数量不一致，不会追加、删除或替换视频');
+  if (page.video === 'absent') {
+    for (const video of prepared.videos) {
+      const field = prepared.config.video ? 'video.file' : `videos[${video.part - 1}].file`;
+      if (!video.file) add(field, '空白页面每个 P 都需要视频文件');
+      else
+        try {
+          adapter.validateVideo(video.file);
+        } catch (error) {
+          add(field, (error as Error).message);
+        }
     }
+  }
+  const count = page.video === 'absent' ? prepared.videos.length : page.count;
+  for (const [index, subtitle] of (prepared.config.subtitles ?? []).entries()) {
+    if (count > 1 && subtitle.part === undefined)
+      add(`subtitles[${index}].part`, '多 P 字幕必须指定所属 part');
+    else if ((subtitle.part ?? 1) > count)
+      add(`subtitles[${index}].part`, '字幕所属 P 超出视频数量');
   }
   const config = prepared.config;
   if (

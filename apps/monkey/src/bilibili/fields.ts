@@ -6,7 +6,7 @@ import { createSchedule, scheduleParts } from './schedule';
 
 // Native-control protocol adapted from the user's .rajio/scripts/bilibili/fill.js.
 // No access to site component instances or stores; no submission controls.
-export const normalizeText = (text: string) => text.replace(/\r/g, '').replace(/\n$/, '');
+const normalizeText = (text: string) => text.replace(/\r/g, '').replace(/\n$/, '');
 export function matches(field: string, actual: unknown, expected: unknown) {
   if (field === 'publish.at' && typeof actual === 'string' && typeof expected === 'string') {
     try {

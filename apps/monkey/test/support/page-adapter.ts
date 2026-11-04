@@ -11,7 +11,7 @@ export function fakeAdapter(overrides: Partial<PageAdapter> = {}): PageAdapter {
     identity: 'test',
     generation: 1
   };
-  return {
+  const adapter: PageAdapter = {
     context: () => ({ ...page }),
     validateVideo: vi.fn(),
     assertContext: vi.fn(),
@@ -25,7 +25,14 @@ export function fakeAdapter(overrides: Partial<PageAdapter> = {}): PageAdapter {
       actual: values.get(t.field),
       message: 'readback'
     }),
-    uploadVideo: vi.fn(async () => {}),
+    readVideo: (part) => ({
+      title: String(values.get(`videos.${part}.title`) ?? ''),
+      state: adapter.context().video
+    }),
+    renameVideo: vi.fn(async (part, title) => {
+      values.set(`videos.${part}.title`, title);
+    }),
+    uploadVideos: vi.fn(async () => {}),
     waitEditor: vi.fn(async () => {}),
     verifyEditor: () => ({ matches: true, message: '编辑表单可操作' }),
     waitVideo: vi.fn(async () => {}),
@@ -37,4 +44,5 @@ export function fakeAdapter(overrides: Partial<PageAdapter> = {}): PageAdapter {
     stable: () => true,
     ...overrides
   };
+  return adapter;
 }

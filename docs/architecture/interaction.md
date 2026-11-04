@@ -12,22 +12,25 @@ controller 管理当前准备数据、活动取消信号和页面绑定，调用
 
 ## 2. 准备结果转换成可展示附件
 
-UI 不直接使用配置对象决定平台行为。presentation 将已准备素材转换成 [Attachment](../../apps/monkey/src/application/types.ts)，同步投影文件名、大小、预览地址及输入准备时保存的字幕文本，不新增文件读取或异步展示前置条件：
+UI 不直接使用配置对象决定平台行为。presentation 将已准备素材转换成 [Attachment](../../apps/monkey/src/application/types.ts)，同步投影视频与字幕名称、所属 P、预览地址及输入准备时保存的字幕文本；媒体大小等元信息由组件读取原始 File，不重复存入附件状态，也不新增文件内容读取或异步展示前置条件：
 
 ```typescript
-interface AttachmentMetadata {
+export type VideoAttachment = {
+  type: 'video';
   name: string;
-  size: number;
-  kind: string;
-}
-export type VideoAttachment = AttachmentMetadata & { type: 'video'; file: File };
-export type CoverAttachment = AttachmentMetadata & {
+  file: File;
+  part: number;
+  title?: string;
+};
+export type CoverAttachment = {
   type: 'cover';
   cover: Pick<CoverImage, 'ratio' | 'source'>;
   url: string;
 };
-export type SubtitleAttachment = AttachmentMetadata & {
+export type SubtitleAttachment = {
   type: 'subtitle';
+  name: string;
+  part: number;
   source: string;
   language: string;
 };
@@ -36,7 +39,7 @@ export type Attachment = VideoAttachment | CoverAttachment | SubtitleAttachment;
 
 Attachment 按 type 区分三种附件：视频必须带 file，封面必须带 cover 和 url，字幕必须带 language 和 source。组件只接收对应类型，不兼容缺少内部必需信息的附件；没有附件时以空集合表达。它们描述本地素材，不是平台上传成功的证明。资源由准备与协调流程管理，组件展示预览不能自行把结果标为通过。
 
-封面的附件元信息与结果目标文件名来自 `CoverImage.source.file`，不展示内部裁剪预览文件名。预览、结果及进度统一使用「个人空间封面（16:9）」「首页推荐封面（4:3）」名称。
+封面的附件元信息与结果目标文件名来自 `CoverImage.source.file`，裁剪预览只提供 URL。预览、结果及进度统一使用「个人空间封面（16:9）」「首页推荐封面（4:3）」名称。
 
 ## 3. 按页面起点推进交互
 
@@ -88,4 +91,4 @@ controller 的 `subscribe` 提供初始状态及后续更新，卸载时取消�
 
 Prepared 的原文、素材引用及结构化 Result 由 application/presentation 投影为 Attachment、汇总及应用阶段；controller 管理流程和发布，不内嵌附件展示组装。workflow 进度只提供 phase 和 id，不导入面板文案。panel/labels 统一字段、动作及状态文案，panel/status 管理颜色和 loading；面板将进度映射为用户可读动作。
 
-浮窗可见性直接消费 PageContext.editor 或 submissionWaiting，不从视频数量推断编辑表单。字幕预览组件归一当前语言并通过 v-model 与目录卡片共享，供视频预览使用；目录卡片不重复归一同一状态。
+浮窗可见性直接消费 PageContext.editor 或 submissionWaiting，不从视频数量推断编辑表单。字幕预览组件按 P 与语言归一当前选择并通过 v-model 与目录卡片共享，视频预览仅使用同 P 的所选字幕；多个本地视频分别展示 P 序号与名称；目录卡片不重复归一同一状态。

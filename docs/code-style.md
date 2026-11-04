@@ -2,7 +2,7 @@
 
 ## 语言与命名
 
-使用 strict TypeScript 和 ESM，公开 API 优先命名导出，入口保持精简。跨包通过包名导入，不引用另一 workspace 的源码。业务模块的相对导入通常不带扩展名；构建配置已有 `.ts` 导入时沿用所在文件的写法。
+使用 strict TypeScript 和 ESM，公开 API 优先命名导出，入口保持精简。类型检查启用 noUnusedLocals 和 noUnusedParameters；删除无用声明，只有为满足回调签名而必须保留的未用参数使用下划线前缀。跨包通过包名导入，不引用另一 workspace 的源码。业务模块的相对导入通常不带扩展名；构建配置已有 `.ts` 导入时沿用所在文件的写法。
 
 函数和变量用 camelCase，类型与 Vue 组件用 PascalCase，普通模块用简短且描述性的 kebab-case 名称。Vue 只负责 Bilipack 自有 UI；职责与依赖遵循 [模块规范](architecture/modules.md)。
 

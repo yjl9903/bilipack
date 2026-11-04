@@ -54,16 +54,26 @@ it('links the subtitle selector with native video captions, defaults to the firs
     summary: '',
     results: [],
     attachments: [
-      { type: 'video', file: new File(['v'], 'v.mp4'), name: 'v.mp4', size: 1, kind: '视频' },
+      {
+        type: 'video',
+        part: 1,
+        file: new File(['v'], 'v.mp4'),
+        name: 'v.mp4'
+      },
       {
         type: 'subtitle',
+        part: 1,
         language: '中文',
         source: chinese,
-        name: 'zh.srt',
-        size: 1,
-        kind: '字幕'
+        name: 'zh.srt'
       },
-      { type: 'subtitle', language: '英语', source: english, name: 'en.srt', size: 1, kind: '字幕' }
+      {
+        type: 'subtitle',
+        part: 1,
+        language: '英语',
+        source: english,
+        name: 'en.srt'
+      }
     ]
   });
   const host = document.createElement('div');
@@ -120,4 +130,66 @@ it('links the subtitle selector with native video captions, defaults to the firs
     app.unmount();
   }
   expect(revokeObjectURL).toHaveBeenCalledTimes(2);
+});
+
+it('keeps identical subtitle languages distinct across parts and attaches captions only to their P', async () => {
+  vi.stubGlobal('VTTCue', PreviewCue);
+  vi.stubGlobal(
+    'URL',
+    class extends URL {
+      static createObjectURL = () => 'blob:preview';
+      static revokeObjectURL = vi.fn();
+    }
+  );
+  const tracks = new Map<HTMLMediaElement, PreviewTrack>();
+  vi.spyOn(HTMLMediaElement.prototype, 'addTextTrack').mockImplementation(function (
+    this: HTMLMediaElement
+  ) {
+    const track = new PreviewTrack();
+    tracks.set(this, track);
+    return track as unknown as TextTrack;
+  });
+  const state: ViewState = {
+    directoryName: 'p',
+    visible: true,
+    busy: false,
+    raw: '',
+    summary: '',
+    results: [],
+    attachments: [1, 2].flatMap((part) => [
+      {
+        type: 'video' as const,
+        part,
+        file: new File(['v'], `${part}.mp4`),
+        name: `${part}.mp4`
+      },
+      {
+        type: 'subtitle' as const,
+        part,
+        language: '中文',
+        source: `1\n00:00:00,000 --> 00:00:01,000\nP${part}\n`,
+        name: `${part}.srt`
+      }
+    ])
+  };
+  const host = document.createElement('div');
+  const app = createTestApp(SelectedDirectoryCard, { state });
+  app.mount(host);
+  host.querySelector<HTMLButtonElement>('#bilipack-tab-video')!.click();
+  await nextTick();
+  let videos = host.querySelectorAll('video');
+  expect(tracks.get(videos[0])?.items[0].text).toBe('P1');
+  expect(tracks.has(videos[1])).toBe(false);
+  host.querySelector<HTMLButtonElement>('#bilipack-panel-subtitle [role=combobox]')!.click();
+  await nextTick();
+  const options = host.querySelectorAll<HTMLElement>('#bilipack-panel-subtitle [role=option]');
+  expect([...options].map((option) => option.textContent?.trim())).toEqual([
+    'P1 · 中文',
+    'P2 · 中文'
+  ]);
+  options[1].click();
+  await nextTick();
+  videos = host.querySelectorAll('video');
+  expect(tracks.get(videos[0])?.mode).toBe('disabled');
+  expect(tracks.get(videos[1])?.items[0].text).toBe('P2');
 });

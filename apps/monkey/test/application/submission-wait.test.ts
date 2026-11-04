@@ -1,5 +1,4 @@
 import { expect, it, vi } from 'vitest';
-import { context } from '../support/run-context';
 import { fakeAdapter } from '../support/page-adapter';
 import type { ViewState } from '../../src/application/types';
 import { createTestController } from '../support/controller';

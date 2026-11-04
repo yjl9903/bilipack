@@ -9,7 +9,6 @@ export function cover(ratio: CoverImage['ratio'], name: string, url: string): Co
   const file = new File(['cover'], name);
   return {
     ratio,
-    file,
     url,
     source: { mode: 'dual', file, width: ratio === '16:9' ? 1600 : 1200, height: 900 }
   };

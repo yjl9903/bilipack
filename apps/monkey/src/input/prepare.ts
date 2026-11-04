@@ -1,8 +1,7 @@
-import { parseConfig, parseSrt, ValidationError, type Diagnostic } from 'bilipack';
+import { parseConfig, parseSrt, videoEntries, ValidationError, type Diagnostic } from 'bilipack';
 import { requireFile } from './files';
 import { prepareCovers, releaseCovers } from './cover';
-import type { PreparationConditions } from './types';
-import type { Prepared } from './types';
+import type { PreparationConditions, Prepared } from './types';
 export async function prepare(
   raw: string,
   files: ReadonlyMap<string, File>,
@@ -16,18 +15,22 @@ export async function prepare(
     e instanceof ValidationError
       ? diagnostics.push(...e.diagnostics)
       : add(field, (e as Error).message);
-  // Keep the local video available for preview even when the page already has a video.
-  // Only the empty-page branch below requires or validates it for upload.
-  let video: File | undefined = config.video ? files.get(config.video.file) : undefined;
-  if (conditions.requireVideo) {
-    if (!config.video) add('video.file', '空白页面需要视频');
-    else
-      try {
-        video = requireFile(files, config.video.file, 'video.file');
-      } catch (e) {
-        collect('video.file', e);
-      }
-  }
+  const entries = videoEntries(config);
+  if (conditions.requireVideo && !entries.length) add('videos', '空白页面需要视频');
+  const videos: Prepared['videos'] = entries.map((entry, index) => {
+    const field = config.video ? 'video.file' : `videos[${index}].file`;
+    let file = entry.file ? files.get(entry.file) : undefined;
+    if (conditions.requireVideo) {
+      if (!entry.file) add(field, '空白页面每个 P 都需要视频文件');
+      else
+        try {
+          file = requireFile(files, entry.file, field);
+        } catch (error) {
+          collect(field, error);
+        }
+    }
+    return { part: index + 1, path: entry.file, title: entry.title, file };
+  });
   const subtitles: Prepared['subtitles'] = [];
   for (const [i, s] of (config.subtitles ?? []).entries()) {
     const field = `subtitles[${i}]`;
@@ -36,7 +39,7 @@ export async function prepare(
       if (!/\.srt$/i.test(s.file)) throw new Error('仅支持 SRT 字幕');
       const source = await file.text();
       parseSrt(source, field);
-      subtitles.push({ file, language: s.language, source });
+      subtitles.push({ part: s.part ?? 1, file, language: s.language, source });
     } catch (e) {
       collect(field, e);
     }
@@ -53,5 +56,5 @@ export async function prepare(
     releaseCovers(covers);
     throw new ValidationError(diagnostics);
   }
-  return { raw, config, video, covers, subtitles };
+  return { raw, config, videos, covers, subtitles };
 }

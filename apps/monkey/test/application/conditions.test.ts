@@ -38,7 +38,7 @@ it.each(['video', 'schedule'] as const)(
     expect(state.results[0].message).toContain(condition === 'video' ? '页面不接受' : '必须已启用');
     expect(adapter.verifyField).not.toHaveBeenCalled();
     expect(adapter.applyField).not.toHaveBeenCalled();
-    expect(adapter.uploadVideo).not.toHaveBeenCalled();
+    expect(adapter.uploadVideos).not.toHaveBeenCalled();
     controller.dispose();
   }
 );
@@ -50,9 +50,9 @@ it('keeps a local video for preview without validating it for upload when the pa
     requireVideo: false
   });
   checkPageConditions(prepared, adapter.context(), adapter);
-  expect(prepared.video).toBe(video);
+  expect(prepared.videos[0]?.file).toBe(video);
   expect(adapter.validateVideo).not.toHaveBeenCalled();
-  expect(adapter.uploadVideo).not.toHaveBeenCalled();
+  expect(adapter.uploadVideos).not.toHaveBeenCalled();
 });
 
 it('rejects unknown page video state before writes', () => {
@@ -60,7 +60,7 @@ it('rejects unknown page video state before writes', () => {
   expect(() => checkPageConditions(c.prepared, { ...c.page, video: 'unknown' }, c.adapter)).toThrow(
     '状态不明'
   );
-  expect(c.adapter.uploadVideo).not.toHaveBeenCalled();
+  expect(c.adapter.uploadVideos).not.toHaveBeenCalled();
 });
 
 it('validates video support on an empty page before writes', () => {
@@ -69,12 +69,12 @@ it('validates video support on an empty page before writes', () => {
       throw new Error('unsupported video');
     })
   });
-  const c = context({ video: file('p/video.bad') }, adapter);
+  const c = context({ videos: [{ part: 1, file: file('p/video.bad') }] }, adapter);
   expect(() =>
     checkPageConditions(c.prepared, { ...c.page, video: 'absent', count: 0 }, adapter)
   ).toThrow('unsupported video');
-  expect(adapter.validateVideo).toHaveBeenCalledExactlyOnceWith(c.prepared.video);
-  expect(adapter.uploadVideo).not.toHaveBeenCalled();
+  expect(adapter.validateVideo).toHaveBeenCalledExactlyOnceWith(c.prepared.videos[0]?.file);
+  expect(adapter.uploadVideos).not.toHaveBeenCalled();
   expect(adapter.applyField).not.toHaveBeenCalled();
 });
 

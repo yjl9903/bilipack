@@ -4,7 +4,6 @@ export type Status =
   | 'pending'
   | 'running'
   | 'verifying'
-  | 'waiting'
   | 'verified'
   | 'skipped'
   | 'failed'

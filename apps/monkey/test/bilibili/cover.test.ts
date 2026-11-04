@@ -2,7 +2,6 @@ import { coverPan } from '../../src/bilibili/cover';
 import { expect, it } from 'vitest';
 import { parseConfig } from 'bilipack';
 import { createBilibiliAdapter } from '../../src/bilibili/adapter';
-import { cover } from '../support/fixtures';
 const coverCapability = (value: unknown) =>
   createBilibiliAdapter(document).capability('cover', value);
 

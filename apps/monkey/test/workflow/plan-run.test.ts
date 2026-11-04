@@ -51,7 +51,7 @@ describe('workflow invariants', () => {
     });
     const c = context({}, a),
       results = await run(plan(c.prepared, c.page), c);
-    expect(a.uploadVideo).not.toHaveBeenCalled();
+    expect(a.uploadVideos).not.toHaveBeenCalled();
     expect(a.waitVideo).toHaveBeenCalledOnce();
     expect(results[0].status).toBe('skipped');
     expect(a.applyField).toHaveBeenCalledOnce();
@@ -82,8 +82,8 @@ describe('workflow invariants', () => {
       {
         config: {},
         subtitles: [
-          { language: '中文', source: '', file: new File(['s'], 'a.srt') },
-          { language: '英语', source: '', file: new File(['s'], 'b.srt') }
+          { part: 1, language: '中文', source: '', file: new File(['s'], 'a.srt') },
+          { part: 1, language: '英语', source: '', file: new File(['s'], 'b.srt') }
         ]
       },
       a
@@ -135,9 +135,9 @@ describe('workflow invariants', () => {
       }),
       verifyVideo: () => ({ matches: false, message: 'not complete' })
     });
-    const c = context({ video: new File(['v'], 'v.mp4') }, a),
+    const c = context({ videos: [{ part: 1, file: new File(['v'], 'v.mp4') }] }, a),
       r = await run(plan(c.prepared, c.page), c);
-    expect(a.uploadVideo).toHaveBeenCalledOnce();
+    expect(a.uploadVideos).toHaveBeenCalledOnce();
     expect(a.applyField).not.toHaveBeenCalled();
     expect(a.waitVideo).not.toHaveBeenCalled();
     expect(r[0].status).toBe('unverified');
@@ -294,7 +294,9 @@ it.each([false, true])(
       {
         config: { info: { title: '目标', tags: ['标签'] } },
         covers: [cover('16:9', 'cover.png', 'blob:cover')],
-        subtitles: [{ language: '中文', source: '', file: new File(['subtitle'], 'zh.srt') }]
+        subtitles: [
+          { part: 1, language: '中文', source: '', file: new File(['subtitle'], 'zh.srt') }
+        ]
       },
       a
     );
@@ -352,8 +354,8 @@ it('skips unsupported targets and their dependents while continuing supported fi
       },
       covers: [cover('16:9', 'c.png', 'blob:c')],
       subtitles: [
-        { language: '英语', source: '', file: new File(['en'], 'en.srt') },
-        { language: '中文', source: '', file: new File(['zh'], 'zh.srt') }
+        { part: 1, language: '英语', source: '', file: new File(['en'], 'en.srt') },
+        { part: 1, language: '中文', source: '', file: new File(['zh'], 'zh.srt') }
       ]
     },
     a
@@ -388,7 +390,7 @@ it('retries a partially failed cover group once without reuploading successful s
     {
       config: {},
       covers: [cover('16:9', 'w.png', 'blob:w'), cover('4:3', 's.png', 'blob:s')],
-      subtitles: [{ language: '中文', source: '', file: new File(['srt'], 'zh.srt') }]
+      subtitles: [{ part: 1, language: '中文', source: '', file: new File(['srt'], 'zh.srt') }]
     },
     adapter
   );
@@ -399,7 +401,7 @@ it('retries a partially failed cover group once without reuploading successful s
   ]);
   expect(adapter.applyCovers).toHaveBeenCalledOnce();
   expect(adapter.applySubtitle).not.toHaveBeenCalled();
-  expect(adapter.uploadVideo).not.toHaveBeenCalled();
+  expect(adapter.uploadVideos).not.toHaveBeenCalled();
   expect(
     result.filter((r) => r.id.startsWith('cover.')).every((r) => r.status === 'verified')
   ).toBe(true);

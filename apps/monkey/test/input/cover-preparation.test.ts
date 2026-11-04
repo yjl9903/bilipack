@@ -48,9 +48,9 @@ it.each([
       requireVideo: false
     });
     try {
-      expect(prepared.covers.map((cover) => [cover.ratio, cover.file.name, cover.url])).toEqual([
-        ['16:9', 'bilipack-wide.png', 'blob:cover-1'],
-        ['4:3', 'bilipack-standard.png', 'blob:cover-2']
+      expect(prepared.covers.map((cover) => [cover.ratio, cover.url])).toEqual([
+        ['16:9', 'blob:cover-1'],
+        ['4:3', 'blob:cover-2']
       ]);
       for (const [index, rect] of [wide, standard].entries()) {
         expect(browser.decode).toHaveBeenNthCalledWith(index + 1, source, {
@@ -70,9 +70,6 @@ it.each([
         expect([canvas.width, canvas.height]).toEqual(rect.slice(2));
         const cover = prepared.covers[index];
         expect(cover.source.file).toBe(source);
-        expect(cover.file).not.toBe(source);
-        expect(cover.file.type).toBe('image/png');
-        expect(cover.file.size).toBe(browser.blob.size);
         expect(cover.source).toEqual({
           mode: 'single',
           file: source,
@@ -80,7 +77,7 @@ it.each([
           height,
           position: index === 0 ? [25, 75] : [65, 25]
         });
-        expect(browser.createObjectURL).toHaveBeenNthCalledWith(index + 1, cover.file);
+        expect(browser.createObjectURL.mock.calls[index][0]).toBe(browser.blob);
         expect(bitmaps[index].close).toHaveBeenCalledOnce();
       }
       expect(browser.encode).toHaveBeenCalledTimes(2);
@@ -112,19 +109,16 @@ it('preserves the separate source files for dual covers without cropping or re-e
     expect(prepared.covers).toEqual([
       {
         ratio: '16:9',
-        file: wide,
         url: 'blob:cover-1',
         source: { mode: 'dual', file: wide, width: 1600, height: 900 }
       },
       {
         ratio: '4:3',
-        file: standard,
         url: 'blob:cover-2',
         source: { mode: 'dual', file: standard, width: 1200, height: 900 }
       }
     ]);
     for (const [index, source] of [wide, standard].entries()) {
-      expect(prepared.covers[index].file).toBe(source);
       expect(prepared.covers[index].source.file).toBe(source);
       expect(browser.decode.mock.calls[index][0]).toBe(source);
       expect(browser.createObjectURL.mock.calls[index][0]).toBe(source);

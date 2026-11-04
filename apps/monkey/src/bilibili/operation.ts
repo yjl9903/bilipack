@@ -73,3 +73,22 @@ export function assignFile(el: HTMLInputElement, file: File, operation: Operatio
   nativeFile(el, file, operation.checkWrite);
   operation.checkWrite();
 }
+
+/** Capture only the synchronous native file picker requested by this button. */
+export function captureFileInput(button: HTMLElement, operation: Operation): HTMLInputElement {
+  const proto = button.ownerDocument.defaultView!.HTMLInputElement.prototype;
+  const original = proto.click;
+  let captured: HTMLInputElement | undefined;
+  proto.click = function () {
+    if (this.type !== 'file') return original.call(this);
+    if (captured) throw new Error('上传触发多个文件控件');
+    captured = this;
+  };
+  try {
+    click(button, operation);
+  } finally {
+    proto.click = original;
+  }
+  if (!captured) throw new Error('未捕获原生文件控件');
+  return captured;
+}

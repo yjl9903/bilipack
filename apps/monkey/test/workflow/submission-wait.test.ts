@@ -157,8 +157,8 @@ it('stops remaining form operations after the user queues submission', async () 
         role: 'condition',
         allowDuringSubmission: true,
         dependsOn: [],
-        execute: (c) => adapter.waitVideo(c.signal, c.page),
-        verify: adapter.verifyVideo
+        execute: (c) => adapter.waitVideo(c.signal, c.page, 1),
+        verify: () => adapter.verifyVideo(1)
       }
     ],
     context({}, adapter)

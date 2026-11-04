@@ -1,18 +1,21 @@
 import type { CoverImage } from '../input/types';
 import type { Result, Progress } from '../workflow/types';
-interface AttachmentMetadata {
+export type VideoAttachment = {
+  type: 'video';
   name: string;
-  size: number;
-  kind: string;
-}
-export type VideoAttachment = AttachmentMetadata & { type: 'video'; file: File };
-export type CoverAttachment = AttachmentMetadata & {
+  file: File;
+  part: number;
+  title?: string;
+};
+export type CoverAttachment = {
   type: 'cover';
   cover: Pick<CoverImage, 'ratio' | 'source'>;
   url: string;
 };
-export type SubtitleAttachment = AttachmentMetadata & {
+export type SubtitleAttachment = {
   type: 'subtitle';
+  name: string;
+  part: number;
   source: string;
   language: string;
 };

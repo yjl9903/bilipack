@@ -96,6 +96,8 @@ const subtitles = z
     section({
       /** 该份字幕文件相对于配置文件的路径，首版使用 SRT。 */
       file: path,
+      /** 所属 P，从 1 开始；多 P 必须显式指定。 */
+      part: z.number().int().positive().optional(),
       /** 字幕语言，例如“中文”；必须非空且不能重复，用于添加或更新对应语言的字幕。 */
       language: string.refine((value) => !!value.trim(), '缺少字幕语言')
     }),
@@ -104,13 +106,13 @@ const subtitles = z
   .superRefine((values, ctx) => {
     const languages = new Set<string>();
     values.forEach((value, index) => {
-      if (languages.has(value.language))
+      if (languages.has(`${value.part ?? 1}:${value.language}`))
         ctx.addIssue({
           code: 'custom',
           path: [index, 'language'],
           message: '同语言字幕重复'
         });
-      languages.add(value.language);
+      languages.add(`${value.part ?? 1}:${value.language}`);
     });
   });
 
@@ -125,6 +127,17 @@ export const configSchema = section({
     /** 视频文件相对于 bilipack.toml 所在目录的路径。 */
     file: path
   }).optional(),
+  /** 有序视频列表；文件在空白页必需，名称省略时保留原状。 */
+  videos: z
+    .array(
+      section({
+        file: path.optional(),
+        title: string.refine((value) => !!value.trim(), '分 P 名称不能为空').optional()
+      }),
+      { error: '必须使用 [[videos]] 数组' }
+    )
+    .min(1, '视频列表不能为空')
+    .optional(),
   /** 封面配置：按所选模式更新两种比例，包括已有稿件；省略时保持原有封面。 */
   cover: cover.optional(),
   /** 投稿信息：只修改显式提供的字段，省略的字段保持页面原状。 */
@@ -247,4 +260,22 @@ export const configSchema = section({
   }).optional(),
   /** 可选字幕列表，以 [[subtitles]] 编写；省略或空列表不操作字幕，未列出的语言保持原状。 */
   subtitles: subtitles.optional()
+}).superRefine((value, ctx) => {
+  if (value.video && value.videos)
+    ctx.addIssue({ code: 'custom', path: ['videos'], message: 'video 与 videos 不能同时配置' });
+  const count = value.videos?.length ?? (value.video ? 1 : undefined);
+  for (const [index, subtitle] of (value.subtitles ?? []).entries()) {
+    if (count !== undefined && count > 1 && subtitle.part === undefined)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['subtitles', index, 'part'],
+        message: '多 P 字幕必须指定所属 part'
+      });
+    if (count !== undefined && (subtitle.part ?? 1) > count)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['subtitles', index, 'part'],
+        message: '字幕所属 P 超出视频数量'
+      });
+  }
 });

@@ -25,11 +25,6 @@ export function createCover(doc: Document) {
     Array.from(root.querySelectorAll<T>(selector)).filter(visible);
   const get = <T extends Element = HTMLElement>(selector: string, root?: ParentNode) =>
     one(all<T>(selector, root), selector);
-  const exact = (selector: string, text: string, root?: ParentNode) =>
-    one(
-      all(selector, root).filter((e) => e.textContent?.trim() === text),
-      text
-    );
   const coverDialog = () => get('.cover-editor');
   let stage = '附件';
   const waitFor: typeof poll = async (...args) => {
@@ -91,7 +86,7 @@ export function createCover(doc: Document) {
   }
   return {
     async applyCovers(
-      files: readonly Pick<CoverImage, 'ratio' | 'file' | 'source'>[],
+      files: readonly Pick<CoverImage, 'ratio' | 'source'>[],
       operation: Operation
     ) {
       covers.clear();

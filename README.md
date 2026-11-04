@@ -110,7 +110,25 @@ language = "中文"
 
 | 配置字段 | 对应内容 | 写法示例 |
 | --- | --- | --- |
-| `video.file` | 视频文件路径 | `"video.mp4"` |
+| `video.file` | 单视频文件路径简写 | `"video.mp4"` |
+| `videos[].file` | 每个 P 的视频文件路径 | `"videos/01.mp4"` |
+| `videos[].title` | 分 P 名称，省略时保留平台名称 | `"正片"` |
+
+多 P 或需要重命名时，使用 `[[videos]]`，不要同时配置 `[video]`：
+
+```toml
+[[videos]]
+file = "videos/main.mp4"
+title = "正片"
+
+[[videos]]
+file = "videos/instrumental.mp4"
+title = "伴奏版"
+```
+
+列表顺序对应 P1、P2……，`info.title` 仍是整条稿件标题。已有视频页跳过上传，
+列表必须与页面 P 数量一致，可省略 `file`，仅填写需要修改的 `title`；空项保留该 P。
+省略整个列表可只更新稿件信息，不会自动追加、删除或重排视频。
 
 #### 封面
 
@@ -174,12 +192,16 @@ standard_file = "covers/4x3.jpg"
 | --- | --- | --- |
 | `file` | SRT 字幕文件路径 | `"subtitles/zh.srt"` |
 | `language` | 字幕语言 | `"中文"` |
+| `part` | 所属 P，从 1 开始；多 P 必填，单视频默认 1 | `2` |
 
 ```toml
 [[subtitles]]
 file = "subtitles/zh.srt"
 language = "中文"
 ```
+
+多 P 字幕可以配置归属和本地预览，当前自动上传路径尚未接入，会逐项提示到播放页处理。
+同一 P 不能重复配置同一种语言，不同 P 可以使用相同语言。
 
 ## 开源协议
 

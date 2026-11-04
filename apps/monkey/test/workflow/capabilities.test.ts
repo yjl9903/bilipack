@@ -109,7 +109,7 @@ it('passes configured values and subtitle languages to capability checks before 
   const c = context(
     {
       config: { commercial: { enabled: true } },
-      subtitles: [{ language: '中文', source: '', file: new File(['srt'], 'zh.srt') }]
+      subtitles: [{ part: 1, language: '中文', source: '', file: new File(['srt'], 'zh.srt') }]
     },
     adapter
   );

@@ -1,3 +1,6 @@
+import type { ApplicationProgress } from '../application/types';
+import type { Progress, Status } from '../workflow/types';
+
 // Field captions in the native form; execution progress keeps its action wording.
 const labels: Record<string, string> = {
   'video.upload': '选择视频',
@@ -14,7 +17,6 @@ const labels: Record<string, string> = {
   'info.description': '简介',
   'info.topic': '话题',
   'info.source': '转载来源',
-  'info.copyright': '转载类型',
   'publish.scheduled': '定时发布',
   'publish.at': '发布时间',
   'publish.collection': '合集',
@@ -32,6 +34,9 @@ const labels: Record<string, string> = {
 };
 
 export function resultName(id: string): string {
+  const video = /^videos\.(\d+)\.(upload|ready|title)$/.exec(id);
+  if (video)
+    return `P${video[1]} ${video[2] === 'title' ? '名称' : video[2] === 'upload' ? '选择视频' : '上传状态'}`;
   if (id.startsWith('cover.')) return labels[id] ?? `封面 ${id.slice(6)}`;
   if (id.startsWith('subtitles.')) return `字幕 ${id.slice(10)}`;
   return labels[id] ?? '配置项';
@@ -62,19 +67,17 @@ const names: Record<string, string> = {
   'info.tags': '填写标签',
   'info.category': '选择分区',
   'info.source': '填写转载来源',
-  'info.copyright': '设置转载类型',
   'publish.scheduled': '设置定时发布',
   'publish.at': '填写发布时间'
 };
-export function stepName(id: string): string {
+function stepName(id: string): string {
+  if (id.startsWith('videos.')) return resultName(id);
   if (id.startsWith('cover.')) return `设置${resultName(id)}`;
   if (id.startsWith('subtitles.')) return `上传 ${id.slice(10)} 字幕`;
   return names[id] ?? id;
 }
 
-export function progressLabel(
-  progress: import('../application/types').ApplicationProgress
-): string {
+export function progressLabel(progress: ApplicationProgress): string {
   if (progress.phase === 'compared') return '比对完成，等待写入';
   const activities = {
     pick: '等待选择 Bilipack 目录',
@@ -91,11 +94,11 @@ export function progressLabel(
     repair: '正在修复',
     compare: '正在比对'
   };
-  const step = progress as import('../workflow/types').Progress;
+  const step = progress as Progress;
   return `${phases[step.phase as keyof typeof phases]}：${stepName(step.id ?? '')}`;
 }
 
-export const resultStatusLabels = {
+const resultStatusLabels: Record<Status, string> = {
   verified: '已完成',
   skipped: '已跳过',
   failed: '失败',
@@ -104,11 +107,10 @@ export const resultStatusLabels = {
   different: '有差异',
   pending: '等待执行',
   running: '执行中',
-  verifying: '核验中',
-  waiting: '等待上传完成'
+  verifying: '核验中'
 };
 
-export function resultStatusLabel(status: import('../workflow/types').Status, comparison = false) {
+export function resultStatusLabel(status: Status, comparison = false) {
   return comparison && status === 'verified' ? '一致' : resultStatusLabels[status];
 }
 

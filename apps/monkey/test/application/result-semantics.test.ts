@@ -23,8 +23,8 @@ it.each(['verified', 'failed', 'unverified'] as const)(
       }),
       verifyField: async () => ({ matches: status === 'verified', message: 'readback' })
     });
-    const c = context({ video: new File(['video'], 'video.mp4') }, adapter);
-    adapter.uploadVideo = vi.fn(async () => {
+    const c = context({ videos: [{ part: 1, file: new File(['video'], 'video.mp4') }] }, adapter);
+    adapter.uploadVideos = vi.fn(async () => {
       adapter.context = () => ({ ...c.page, video: 'uploading', count: 1 });
     });
     const snapshots: string[][] = [];
@@ -48,11 +48,11 @@ it('does not count existing video observations as completing failed targets', as
       throw new Error('failed');
     })
   });
-  const c = context({ video: new File(['video'], 'unused.mp4') }, adapter);
+  const c = context({ videos: [{ part: 1, file: new File(['video'], 'unused.mp4') }] }, adapter);
   const results = await run(plan(c.prepared, c.page), c);
   expect(results[0]).toMatchObject({ role: 'condition', status: 'skipped' });
   expect(results.at(-1)).toMatchObject({ role: 'condition', status: 'verified' });
-  expect(adapter.uploadVideo).not.toHaveBeenCalled();
+  expect(adapter.uploadVideos).not.toHaveBeenCalled();
   expect(executionStatus(results)).toBe('error');
 });
 
@@ -73,11 +73,11 @@ it.each([false, true])(
     const c = context(
       {
         config: hasTitle ? { info: { title: '目标' } } : {},
-        video: new File(['video'], 'video.mp4')
+        videos: [{ part: 1, file: new File(['video'], 'video.mp4') }]
       },
       adapter
     );
-    adapter.uploadVideo = vi.fn(async () => {
+    adapter.uploadVideos = vi.fn(async () => {
       adapter.context = () => ({ ...c.page, video: 'uploading', count: 1 });
     });
     const results = await run(plan(c.prepared, c.page), c);
@@ -110,7 +110,11 @@ it.each(['single', 'dual'] as const)(
     expect(
       (await compare(c, vi.fn())).filter((r) => r.role === 'target').map((r) => r.expected)
     ).toEqual(expected);
-    expect(presentAttachments(c.prepared).map((attachment) => attachment.name)).toEqual(expected);
+    expect(
+      presentAttachments(c.prepared)
+        .filter((attachment) => attachment.type === 'cover')
+        .map((attachment) => attachment.cover.source.file.name)
+    ).toEqual(expected);
     expect(c.adapter.applyCovers).toHaveBeenCalledOnce();
   }
 );
@@ -120,7 +124,7 @@ it('classifies readonly field and attachment comparisons as targets without clai
   const c = context(
     {
       covers: [cover('16:9', 'wide.png', '')],
-      subtitles: [{ language: '中文', source: '', file: new File(['s'], 'zh.srt') }]
+      subtitles: [{ part: 1, language: '中文', source: '', file: new File(['s'], 'zh.srt') }]
     },
     adapter
   );
@@ -143,11 +147,11 @@ it('reports failed video assignment without counting blocked targets as complete
       identity: 'new',
       generation: 1
     }),
-    uploadVideo: vi.fn(async () => {
+    uploadVideos: vi.fn(async () => {
       throw new Error('assignment failed');
     })
   });
-  const c = context({ video: new File(['video'], 'video.mp4') }, adapter);
+  const c = context({ videos: [{ part: 1, file: new File(['video'], 'video.mp4') }] }, adapter);
   const results = await run(plan(c.prepared, c.page), c);
   expect(results[0]).toMatchObject({ role: 'target', status: 'failed' });
   expect(adapter.applyField).not.toHaveBeenCalled();

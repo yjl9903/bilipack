@@ -33,7 +33,7 @@ export async function prepareCovers(
       if (!/\.(jpe?g|png)$/i.test(path)) throw new Error(`${path}: 封面仅支持 JPEG / PNG`);
       const bitmap = await createImageBitmap(source, { imageOrientation: 'from-image' });
       try {
-        let file = source;
+        let preview: Blob = source;
         if (config.mode === 'dual') {
           if (Math.abs(bitmap.width - bitmap.height * r) > 1)
             throw new Error(
@@ -58,15 +58,13 @@ export async function prepareCovers(
             canvas.width,
             canvas.height
           );
-          const blob = await new Promise<Blob>((resolve, reject) =>
+          preview = await new Promise<Blob>((resolve, reject) =>
             canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('封面编码失败'))), 'image/png')
           );
-          file = new File([blob], `bilipack-${slot}.png`, { type: 'image/png' });
         }
         result.push({
           ratio,
-          file,
-          url: URL.createObjectURL(file),
+          url: URL.createObjectURL(preview),
           source: {
             file: source,
             width: bitmap.width,

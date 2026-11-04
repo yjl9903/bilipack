@@ -48,7 +48,7 @@ export async function run(
   };
   const submissionWaiting = () => {
     const page = context.adapter.context();
-    return !!page.submissionWaiting && matchesContext(context.page, page) && page.count === 1;
+    return !!page.submissionWaiting && matchesContext(context.page, page) && page.count > 0;
   };
   const assert = () => {
     context.signal.throwIfAborted();

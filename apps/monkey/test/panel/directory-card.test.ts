@@ -83,23 +83,25 @@ it('separates media tabs, renders subtitle text safely and releases video previe
     attachments: [
       {
         type: 'video',
+        part: 1,
         file: video,
-        name: 'videos/clip.mp4',
-        size: 5,
-        kind: '视频'
+        name: 'videos/clip.mp4'
       },
       {
         type: 'cover',
         url: 'blob:cover',
-        name: 'cover.png',
-        size: 10,
-        kind: '封面',
         cover: {
           ratio: '16:9',
           source: { mode: 'dual', file: new File(['cover'], 'cover.png'), width: 1600, height: 900 }
         }
       },
-      { type: 'subtitle', language: 'zh', source, name: 'zh.srt', size: 20, kind: '字幕 · zh' }
+      {
+        type: 'subtitle',
+        part: 1,
+        language: 'zh',
+        source,
+        name: 'zh.srt'
+      }
     ]
   });
   const host = document.createElement('div');

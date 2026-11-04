@@ -6,18 +6,21 @@ export interface PageContext {
   generation: number;
   video: VideoState;
   count: number;
+  /** Maximum count authorized for this empty-page upload. */
+  uploadCount?: number;
   target: boolean;
   editor: boolean;
   submissionWaiting?: boolean;
 }
-/** An empty page may acquire its first video; an existing video must remain present. */
+/** Empty pages may receive the declared upload; existing pages must retain their count. */
 export function matchesContext(expected: PageContext, actual: PageContext): boolean {
   return (
     actual.target &&
     actual.identity === expected.identity &&
     actual.generation === expected.generation &&
-    actual.count <= 1 &&
-    (expected.count !== 1 || actual.count === 1)
+    (expected.count === 0
+      ? actual.count <= (expected.uploadCount ?? 1)
+      : actual.count === expected.count)
   );
 }
 export interface Evidence {
@@ -38,13 +41,15 @@ export interface PageAdapter {
   readField(field: string): unknown;
   applyField(target: FieldTarget, signal: AbortSignal, page: PageContext): Promise<void>;
   verifyField(target: FieldTarget, signal: AbortSignal, page: PageContext): Promise<Evidence>;
-  uploadVideo(file: File, signal: AbortSignal, page: PageContext): Promise<void>;
+  readVideo(part: number): { title: string; state: VideoState };
+  renameVideo(part: number, title: string, signal: AbortSignal, page: PageContext): Promise<void>;
+  uploadVideos(files: readonly File[], signal: AbortSignal, page: PageContext): Promise<void>;
   waitEditor(signal: AbortSignal, page: PageContext): Promise<void>;
   verifyEditor(): Evidence;
-  waitVideo(signal: AbortSignal, page: PageContext): Promise<void>;
-  verifyVideo(): Evidence;
+  waitVideo(signal: AbortSignal, page: PageContext, part: number): Promise<void>;
+  verifyVideo(part: number): Evidence;
   applyCovers(
-    files: readonly Pick<CoverImage, 'ratio' | 'file' | 'source'>[],
+    files: readonly Pick<CoverImage, 'ratio' | 'source'>[],
     signal: AbortSignal,
     page: PageContext
   ): Promise<void>;

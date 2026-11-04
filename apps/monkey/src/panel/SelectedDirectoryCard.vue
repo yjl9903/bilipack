@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { subtitleKey } from './utils/subtitles';
 import type { ViewState } from '../application/types';
 import SummaryTab from './components/summary/SummaryTab.vue';
 import ValidationTab from './components/validation/ValidationTab.vue';
@@ -16,7 +17,7 @@ const subtitles = computed(() =>
 );
 const selectedLanguage = ref('');
 const selectedSubtitle = computed(() =>
-  subtitles.value.find((file) => file.language === selectedLanguage.value)
+  subtitles.value.find((file) => subtitleKey(file, subtitles.value) === selectedLanguage.value)
 );
 
 const videos = computed(() => props.state.attachments.filter((file) => file.type === 'video'));
@@ -116,11 +117,16 @@ function navigateTabs(event: KeyboardEvent) {
         :files="subtitles"
       />
       <template v-else-if="tab.id === 'video' && videos.length">
-        <figure v-for="(file, i) in videos" :key="i">
+        <figure v-for="file in videos" :key="file.part">
+          <figcaption v-if="videos.length > 1">
+            P{{ file.part }} · {{ file.title ?? file.name }}
+          </figcaption>
           <p
             v-if="
               state.results.some(
-                (result) => result.id === 'video.upload' && result.status === 'skipped'
+                (result) =>
+                  (result.id === 'video.upload' || result.id === `videos.${file.part}.upload`) &&
+                  result.status === 'skipped'
               )
             "
             class="video-upload-notice"
@@ -130,7 +136,7 @@ function navigateTabs(event: KeyboardEvent) {
           <VideoPreview
             v-if="activeTab === tab.id"
             :file="file.file"
-            :subtitle="selectedSubtitle"
+            :subtitle="selectedSubtitle?.part === file.part ? selectedSubtitle : undefined"
           />
         </figure>
       </template>

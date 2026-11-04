@@ -29,7 +29,9 @@ function capabilityAdapter(editing = false) {
     document,
     Object.assign(() => page, {
       expectUpload: vi.fn(),
-      cancelExpectedUpload: vi.fn()
+      cancelExpectedUpload: vi.fn(),
+      expectRename: vi.fn(),
+      cancelExpectedRename: vi.fn()
     })
   );
 }
@@ -193,7 +195,12 @@ it('opens collapsed settings before comparing their fields without writing value
       identity: 'https://member.bilibili.com/platform/upload/video/frame',
       generation: 1
     }),
-    { expectUpload: vi.fn(), cancelExpectedUpload: vi.fn() }
+    {
+      expectUpload: vi.fn(),
+      cancelExpectedUpload: vi.fn(),
+      expectRename: vi.fn(),
+      cancelExpectedRename: vi.fn()
+    }
   );
   const adapter = createBilibiliAdapter(document, readContext);
   const signal = new AbortController().signal;
@@ -220,7 +227,12 @@ it('does not expand settings when comparing a basic field', async () => {
     count: 1,
     video: 'ready'
   };
-  const read = Object.assign(() => page, { expectUpload: vi.fn(), cancelExpectedUpload: vi.fn() });
+  const read = Object.assign(() => page, {
+    expectUpload: vi.fn(),
+    cancelExpectedUpload: vi.fn(),
+    expectRename: vi.fn(),
+    cancelExpectedRename: vi.fn()
+  });
   const adapter = createBilibiliAdapter(document, read);
   expect(
     await adapter.verifyField(
@@ -242,7 +254,12 @@ it('preserves a real expansion failure instead of claiming a successful read', a
     count: 1,
     video: 'ready'
   };
-  const read = Object.assign(() => page, { expectUpload: vi.fn(), cancelExpectedUpload: vi.fn() });
+  const read = Object.assign(() => page, {
+    expectUpload: vi.fn(),
+    cancelExpectedUpload: vi.fn(),
+    expectRename: vi.fn(),
+    cancelExpectedRename: vi.fn()
+  });
   const adapter = createBilibiliAdapter(document, read);
   await expect(
     adapter.verifyField(

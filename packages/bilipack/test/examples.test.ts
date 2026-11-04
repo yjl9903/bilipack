@@ -6,6 +6,6 @@ import { parseConfig } from '../src';
 it('parses every product example', () => {
   const doc = readFileSync(new URL('../../../docs/intent/README.md', import.meta.url), 'utf8');
   const examples = [...doc.matchAll(/```toml\n([\s\S]*?)```/g)];
-  expect(examples.length).toBe(5);
+  expect(examples.length).toBe(7);
   for (const [, source] of examples) expect(() => parseConfig(source)).not.toThrow();
 });

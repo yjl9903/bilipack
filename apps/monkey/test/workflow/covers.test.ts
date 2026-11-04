@@ -7,7 +7,7 @@ import { context } from '../support/run-context';
 import { fakeAdapter } from '../support/page-adapter';
 import { cover } from '../support/fixtures';
 it('skips unavailable cover controls while writing supported fields', async () => {
-  const capability = vi.fn((field: string, value?: unknown) =>
+  const capability = vi.fn((field: string) =>
     field === 'cover' ? { available: false, reason: '封面控件不可用' } : { available: true }
   );
   const adapter = fakeAdapter({ capability, applyCovers: vi.fn(async () => {}) });
@@ -33,9 +33,7 @@ it.each([
   '[cover]\nfile="cover.jpg"\nwide_position=[25,75]\nstandard_position=[65,25]',
   '[cover]\nmode="dual"\nwide_file="w.jpg"\nstandard_file="s.png"'
 ])('passes cover preparation strategy through comparison and batched writing: %s', async (raw) => {
-  const capability = vi.fn((field: string, value?: unknown) =>
-    field === 'cover' ? { available: true } : { available: true }
-  );
+  const capability = vi.fn(() => ({ available: true }));
   const adapter = fakeAdapter({ capability, applyCovers: vi.fn(async () => {}) });
   const config = parseConfig(raw);
   const c = context(

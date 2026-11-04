@@ -10,19 +10,17 @@ it('offers only supplied subtitle languages and switches filename and raw previe
     files: [
       {
         type: 'subtitle',
+        part: 1,
         language: '中文',
         name: 'pack/subtitles/zh.srt',
-        source: chinese,
-        size: 30,
-        kind: '字幕 · 中文'
+        source: chinese
       },
       {
         type: 'subtitle',
+        part: 1,
         language: '英语',
         name: 'pack/subtitles/en.srt',
-        source: english,
-        size: 40,
-        kind: '字幕 · 英语'
+        source: english
       }
     ]
   });

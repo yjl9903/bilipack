@@ -31,7 +31,7 @@ it('never uses write-verification evidence to claim existing attachments match l
     {
       config: {},
       covers: [cover('16:9', 'cover.png', 'blob:cover')],
-      subtitles: [{ language: '中文', source: '', file: new File(['s'], 'zh.srt') }]
+      subtitles: [{ part: 1, language: '中文', source: '', file: new File(['s'], 'zh.srt') }]
     },
     adapter
   );
