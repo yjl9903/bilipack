@@ -1,4 +1,5 @@
 import { one, visible } from './controls';
+import { captureDialogScroll } from './dialog';
 import { assignFile, waitFor as poll, click, type Operation } from './operation';
 import type { Evidence } from '../workflow/port';
 
@@ -37,6 +38,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
     await expand(operation);
     if (all('.subtitle-upload .bcc-dialog').length) throw new Error('已有字幕弹窗，请先关闭后重试');
     stage = '打开字幕弹窗';
+    const restoreScroll = captureDialogScroll(doc);
     const modify = all('.subtitle-list .operate');
     click(
       modify.length ? one(modify, '修改字幕') : exact('button', '上传字幕', get('#video-up-app')),
@@ -46,19 +48,25 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
       () => (all('.subtitle-upload .bcc-dialog').length === 1 ? true : undefined),
       operation
     );
+    return restoreScroll;
   }
   const rows = () => all('.modal-content-file-list-item', subtitleDialog());
   const languageRows = (language: string) =>
     rows().filter(
       (e) => e.querySelector('.type')?.textContent?.trim() === subtitleLanguage(language)
     );
-  async function closeSubtitle(operation: Operation, confirm: boolean) {
+  async function closeSubtitle(
+    operation: Operation,
+    confirm: boolean,
+    restoreScroll: ReturnType<typeof captureDialogScroll>
+  ) {
     operation.check();
     click(exact('.modal-footer-button', confirm ? '确认' : '取消', subtitleDialog()), operation);
     await waitFor(
       () => (!all('.subtitle-upload .bcc-dialog').length ? true : undefined),
       operation
     );
+    await restoreScroll(operation);
   }
   /** The site's subtitle button creates a detached input synchronously. Capture
    * just that native click, supply the selected local File, and restore immediately.
@@ -96,7 +104,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
       const label = subtitleLanguage(language);
       if (!label) throw new Error(`未接入字幕语言：${language}`);
       subtitles.delete(language);
-      await openSubtitle(operation);
+      const restoreScroll = await openSubtitle(operation);
       const existing = languageRows(language);
       if (existing.length > 1) throw new Error('同语言存在多个字幕，停止修改');
       if (existing.length) {
@@ -153,7 +161,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
         operation,
         30_000
       );
-      await closeSubtitle(operation, true);
+      await closeSubtitle(operation, true, restoreScroll);
       await waitFor(
         () => (all('.subtitle-list .operate').length === 1 ? true : undefined),
         operation
@@ -163,7 +171,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
     async verifySubtitle(language: string, operation: Operation): Promise<Evidence> {
       const expected = subtitles.get(language);
       if (!expected) return { matches: false, message: '没有本次字幕更新证据' };
-      await openSubtitle(operation);
+      const restoreScroll = await openSubtitle(operation);
       try {
         const found = languageRows(language);
         const actual =
@@ -177,7 +185,7 @@ export function createSubtitles(doc: Document, expand: (operation: Operation) =>
               : '字幕语言或文件名不一致'
         };
       } finally {
-        await closeSubtitle(operation, false);
+        await closeSubtitle(operation, false, restoreScroll);
       }
     }
   };

@@ -1,5 +1,6 @@
 import type { FieldTarget } from 'bilipack';
 import { one, visible } from './controls';
+import { captureDialogScroll } from './dialog';
 import { waitFor, writeText, click, type Operation } from './operation';
 import { reconcileTags, validateTagCapacity } from './tags';
 import { createSchedule, scheduleParts } from './schedule';
@@ -243,6 +244,7 @@ export function createFields(doc: Document) {
         await waitFor(() => topic() === '' || undefined, operation);
       }
       if (value) {
+        const restoreScroll = captureDialogScroll(doc);
         click(get('#video-up-app .tag-more'), operation);
         try {
           await waitFor(() => all('.topic-dialog .bcc-dialog').length || undefined, operation);
@@ -266,8 +268,11 @@ export function createFields(doc: Document) {
           await waitFor(() => !all('.topic-dialog .bcc-dialog').length || undefined, operation);
           await waitFor(() => topic() === value || undefined, operation);
         } finally {
-          if (canContinue(operation) && all('.topic-dialog .bcc-dialog').length)
-            click(get('.topic-dialog .bcc-dialog button.submit-cancel'), operation);
+          if (canContinue(operation)) {
+            if (all('.topic-dialog .bcc-dialog').length)
+              click(get('.topic-dialog .bcc-dialog button.submit-cancel'), operation);
+            await restoreScroll(operation);
+          }
         }
       }
       // Topic selection owns its special tag only; preserve all ordinary tags.

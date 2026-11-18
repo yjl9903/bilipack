@@ -1,6 +1,7 @@
 import type { Position } from 'bilipack';
 import type { CoverImage } from '../input/types';
 import { one, visible } from './controls';
+import { captureDialogScroll } from './dialog';
 import { assignFile, waitFor as poll, click, type Operation } from './operation';
 import type { Evidence } from '../workflow/port';
 /** Drag from the native editor's centered, minimum-fit image to the requested crop. */
@@ -67,6 +68,7 @@ export function createCover(doc: Document) {
     operation.check();
     if (all('.cover-editor').length) throw new Error('已有封面弹窗，请先关闭后重试');
     stage = '打开封面编辑器';
+    const restoreScroll = captureDialogScroll(doc);
     click(get('.cover-module-main .cover-img, .cover-module-main .cover-empty'), operation);
     await waitFor(() => (all('.cover-editor').length === 1 ? true : undefined), operation);
     await waitFor(
@@ -77,12 +79,17 @@ export function createCover(doc: Document) {
           : undefined,
       operation
     );
+    return restoreScroll;
   }
-  async function closeCover(operation: Operation) {
+  async function closeCover(
+    operation: Operation,
+    restoreScroll: ReturnType<typeof captureDialogScroll>
+  ) {
     operation.check();
     stage = '关闭封面编辑器';
     click(get('.cover-editor-button .button:not(.submit)', coverDialog()), operation);
     await waitFor(() => (!all('.cover-editor').length ? true : undefined), operation);
+    await restoreScroll(operation);
   }
   return {
     async applyCovers(
@@ -93,7 +100,7 @@ export function createCover(doc: Document) {
       expectedSync = undefined;
       const single = files[0].source.mode === 'single';
       expectedSync = single;
-      await openCover(operation);
+      let restoreScroll = await openCover(operation);
       for (const [index, { ratio, source }] of files.entries()) {
         stage = `激活 ${ratio} 封面槽位`;
         const dialog = coverDialog();
@@ -238,9 +245,10 @@ export function createCover(doc: Document) {
         operation,
         30_000
       );
+      await restoreScroll(operation);
       // Reopen the locally confirmed form state. This is not evidence of a saved
       // or published cover, or a pixel comparison with the requested source file.
-      await openCover(operation);
+      restoreScroll = await openCover(operation);
       for (const { ratio } of files) {
         if (syncInput(ratio).checked !== expectedSync) throw new Error('封面同步状态未保持');
         const actual = await waitFor(
@@ -256,12 +264,12 @@ export function createCover(doc: Document) {
         );
         covers.set(ratio, actual);
       }
-      await closeCover(operation);
+      await closeCover(operation, restoreScroll);
     },
     async verifyCover(ratio: '16:9' | '4:3', operation: Operation): Promise<Evidence> {
       const expected = covers.get(ratio);
       if (!expected) return { matches: false, message: '没有本次封面上传证据' };
-      await openCover(operation);
+      const restoreScroll = await openCover(operation);
       try {
         const actual = await waitFor(
           () => {
@@ -283,7 +291,7 @@ export function createCover(doc: Document) {
             : '封面画布、裁剪或同步状态已变化'
         };
       } finally {
-        await closeCover(operation);
+        await closeCover(operation, restoreScroll);
       }
     }
   };
