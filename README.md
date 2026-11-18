@@ -30,18 +30,13 @@ https://github.com/user-attachments/assets/d65a9606-c0ab-4e24-8e11-ff9ee38b034b
 把下面的 prompt 交给你的 AI Agent：
 
 ```text
-请根据以下视频素材目录, 整理可以用 Bilipack 投稿 B 站的目录.
-
-素材目录：<我的视频、封面和字幕所在目录>
-投稿要求：<填写你的要求，或请先和我讨论视频主题、标题、简介、分区、标签等内容>
-
 请先阅读 https://github.com/yjl9903/bilipack 的 README 和
 packages/bilipack/src/config/schema.ts
 
-根据实际素材和我们确定的投稿要求，整理视频投稿目录并生成 bilipack.toml 配置文件.
-优先在原目录中生成, 不确定的内容和我确认.
+请检查下面目录的视频素材, 为其生成可以用于投稿 B 站的 bilipack.toml 配置文件.
 
-完成后, 汇报视频包的路径和信息.
+素材目录：<我的视频、封面和字幕所在目录>
+投稿要求：<填写你的要求，或请先和我讨论视频主题、标题、简介、分区、标签等内容>
 ```
 
 ### 2. 导入投稿页
